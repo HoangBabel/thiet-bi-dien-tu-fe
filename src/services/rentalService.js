@@ -9,6 +9,16 @@ function authHeader() {
 
 export default {
   // ============================
+  //  LẤY DANH SÁCH ĐƠN NGƯỜI DÙNG (Dựa trên JWT)
+  // ============================
+  async getMyRentals() {
+    const res = await axios.get(`${API_URL}/user`, {
+      headers: authHeader(),
+    });
+    // Trả về array RentalDto với đầy đủ thông tin Payment
+    return res.data;
+  },
+  // ============================
   //  LẤY DANH SÁCH ĐƠN NGƯỜI DÙNG
   // ============================
   async getUserRentals(userId) {

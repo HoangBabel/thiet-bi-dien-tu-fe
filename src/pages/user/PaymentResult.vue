@@ -44,16 +44,6 @@
     <i class="bi bi-credit-card me-1"></i>
     {{ order.paymentStatus === 'UNPAID' ? 'Thanh toán PayOS' : 'Đang chờ xác nhận...' }}
   </a>
-
-  <!-- QR code PayOS -->
-  <div v-if="order.qrCodeUrl" class="mt-2">
-    <img
-      :src="order.qrCodeUrl"
-      alt="QR PayOS"
-      class="img-fluid qr-blink"
-      style="max-width:200px;"
-    />
-  </div>
 </div>
 
 
@@ -179,7 +169,7 @@ onMounted(() => {
 
     if (!isPaid.value) {
       refreshPaymentStatus();
-      intervalId = setInterval(refreshPaymentStatus, 10000);
+      intervalId = setInterval(refreshPaymentStatus, 50000);
     }
   } catch (err) {
     console.error(err);

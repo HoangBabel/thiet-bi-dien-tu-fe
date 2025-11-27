@@ -14,6 +14,7 @@ const payosService = {
   // ========================
   async createPaymentLink(orderId) {
     if (!orderId || orderId <= 0) throw new Error("Invalid orderId.");
+
     try {
       const res = await axios.post(
         `${API_BASE}/payos/create-payment-link`,
@@ -37,6 +38,7 @@ const payosService = {
 
   async getPaymentStatus(orderId) {
     if (!orderId || orderId <= 0) throw new Error("Invalid orderId.");
+
     try {
       const res = await axios.get(`${API_BASE}/payos/status/${orderId}`, {
         headers: authHeader(),
@@ -72,11 +74,13 @@ const payosService = {
 
   pollPaymentStatus(orderId, callback, interval = 10000, maxAttempts = 30) {
     let attempts = 0;
+
     const timer = setInterval(async () => {
       attempts++;
       try {
         const status = await payosService.getPaymentStatus(orderId);
         callback(status);
+
         if (status.paymentStatus === "PAID" || attempts >= maxAttempts) {
           clearInterval(timer);
         }
@@ -90,10 +94,11 @@ const payosService = {
   },
 
   // ========================
-  // RENTAL PAYMENT
+  // RENTAL PAYMENT (QR PayOS)
   // ========================
   async getRentalPaymentStatus(rentalId, devUserId) {
     if (!rentalId || rentalId <= 0) throw new Error("Invalid rentalId.");
+
     const params = devUserId ? { devUserId } : {};
 
     try {
@@ -102,16 +107,13 @@ const payosService = {
         params,
       });
 
+      // API trả về: { Id, Status, paymentStatus, PaymentUrl, QrCodeUrl }
       return {
-        rentalId: res.data.rentalId || res.data.Id,
+        rentalId: res.data.Id,
         status: res.data.Status,
-        paymentStatus: res.data.paymentStatus || "UNKNOWN",
-        paymentUrl: res.data.paymentUrl || res.data.PaymentUrl,
-        qrCodeUrl: res.data.qrCode || res.data.QrCodeUrl,
-        paymentLinkId: res.data.paymentLinkId || null,
-        finalAmount: res.data.finalAmount,
-        paidAt: res.data.paidAt,
-        transactionCode: res.data.transactionCode,
+        paymentStatus: res.data.paymentStatus || "UNPAID",
+        paymentUrl: res.data.PaymentUrl,
+        qrCodeUrl: res.data.QrCodeUrl,
       };
     } catch (err) {
       console.error("❌ Lỗi khi lấy trạng thái rental:", err.response?.data || err.message);
@@ -121,6 +123,7 @@ const payosService = {
 
   async createRentalPaymentLink(rentalId, devUserId) {
     if (!rentalId || rentalId <= 0) throw new Error("Invalid rentalId.");
+
     const params = devUserId ? { devUserId } : {};
 
     try {
@@ -140,16 +143,19 @@ const payosService = {
       };
     } catch (err) {
       const data = err.response?.data;
+
+      // Nếu BE trả "Đã tồn tại link thanh toán."
       if (data?.message?.toLowerCase().includes("tồn tại")) {
         return {
-          message: "Link đã tồn tại.",
+          message: data.message,
           rentalId,
-          paymentUrl: data.paymentUrl || null,
-          qrCodeUrl: data.qrCodeUrl || null,
-          paymentLinkId: data.paymentLinkId || null,
+          paymentUrl: data.paymentUrl,
+          qrCodeUrl: data.qrCodeUrl,
+          paymentLinkId: data.paymentLinkId,
           status: "PENDING",
         };
       }
+
       console.error("❌ Lỗi tạo PayOS link rental:", err.response?.data || err.message);
       throw new Error("Lỗi PayOS Rental.");
     }
@@ -157,21 +163,24 @@ const payosService = {
 
   async getRentalPaymentLink(rentalId, devUserId) {
     if (!rentalId || rentalId <= 0) throw new Error("Invalid rentalId.");
+
     try {
       const status = await payosService.getRentalPaymentStatus(rentalId, devUserId);
 
-      if (status.paymentStatus === "PENDING" && status.paymentUrl) {
+      // Nếu đã có QR + paymentUrl (BE đã tạo link rồi)
+      if (status.paymentUrl) {
         return {
           message: "Link đã tồn tại",
           rentalId: status.rentalId,
           paymentUrl: status.paymentUrl,
           qrCodeUrl: status.qrCodeUrl,
-          paymentLinkId: status.paymentLinkId,
           status: status.paymentStatus,
         };
       }
 
+      // Nếu chưa có → tạo mới
       return await payosService.createRentalPaymentLink(rentalId, devUserId);
+
     } catch (err) {
       console.error("❌ Lỗi getRentalPaymentLink:", err);
       throw err;
@@ -180,11 +189,13 @@ const payosService = {
 
   pollRentalPaymentStatus(rentalId, callback, interval = 5000, maxAttempts = 60, devUserId) {
     let attempts = 0;
+
     const timer = setInterval(async () => {
       attempts++;
       try {
         const status = await payosService.getRentalPaymentStatus(rentalId, devUserId);
         callback(status);
+
         if (status.paymentStatus === "PAID" || attempts >= maxAttempts) {
           clearInterval(timer);
         }
