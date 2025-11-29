@@ -1,4 +1,4 @@
-<template> 
+<template>
   <div class="cart-page container py-5">
     <h2 class="text-center mb-5 fw-bold text-dark">
       🛒 Giỏ thuê của bạn
@@ -40,6 +40,8 @@
                 <th>Ngày bắt đầu</th>
                 <th>Ngày kết thúc</th>
                 <th>Số lượng</th>
+                <th>Số ngày</th>
+                <th>Đơn giá</th>
                 <th>Tổng tiền</th>
               </tr>
             </thead>
@@ -52,32 +54,34 @@
                 <td>{{ formatDate(rental.startDate) }}</td>
                 <td>{{ formatDate(rental.endDate) }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>
-                 {{ formatCurrency(rental.totalPrice) }}
-                </td>
+                <td>{{ computeRentalDays(rental) }}</td>
+                <td>{{ formatCurrency(item.pricePerUnitAtBooking) }}</td>
+                <td>{{ formatCurrency(item.subTotal) }}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Button actions -->
+        <!-- Summary -->
         <div class="cart-summary d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 px-3">
-          <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-2"> 
-            <button class="btn btn-outline-danger mb-3 mb-md-0 px-4" @click="clearCart(rental.id)">
-              <i class="bi bi-trash3 me-1"></i> Xóa đơn
-            </button>
+          <div class="text-start mb-3 mb-md-0">
+            <p class="mb-1 fw-semibold">
+              Tổng tiền: <span class="text-danger">{{ formatCurrency(rental.totalPrice) }}</span>
+            </p>
+            <p v-if="rental.depositPaid" class="mb-0 fw-semibold">
+              Cọc đã thanh toán: <span class="text-warning">{{ formatCurrency(rental.depositPaid) }}</span>
+            </p>
           </div>
 
+          <!-- Buttons -->
           <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-2">
-            <button
-              class="btn btn-outline-primary px-4 shadow-sm"
-              @click="openEditRentalModal(rental)">
+            <button class="btn btn-outline-danger px-4" @click="clearCart(rental.id)">
+              <i class="bi bi-trash3 me-1"></i> Xóa đơn
+            </button>
+            <button class="btn btn-outline-primary px-4 shadow-sm" @click="openEditRentalModal(rental)">
               <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa ngày thuê
             </button>
-
-            <button
-              class="btn btn-success px-4 shadow-sm"
-              @click="proceedToCheckout(rental)">
+            <button class="btn btn-success px-4 shadow-sm" @click="proceedToCheckout(rental)">
               <i class="bi bi-cash-stack me-1"></i> Thanh toán đơn
             </button>
           </div>
@@ -117,9 +121,7 @@
 
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="closeEditModal">Hủy</button>
-            <button class="btn btn-primary" @click="saveEditDates">
-              Lưu thay đổi
-            </button>
+            <button class="btn btn-primary" @click="saveEditDates">Lưu thay đổi</button>
           </div>
 
         </div>
@@ -133,7 +135,7 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import rentalService from "@/services/rentalService"
+import rentalService from "@/services/RentalService"
 
 const rentals = ref([])
 const loading = ref(true)
@@ -149,13 +151,15 @@ function formatDate(d) {
   return d ? new Date(d).toLocaleDateString("vi-VN") : "Không xác định"
 }
 
+function formatCurrency(value) {
+  return (
+    value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫"
+  )
+}
+
 function formatDateForInput(dateStr) {
   if (!dateStr) return ""
   return new Date(dateStr).toISOString().split("T")[0]
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value)
 }
 
 /* ============= TÍNH NGÀY THUÊ ============= */
@@ -171,15 +175,15 @@ function computeRentalDays(rental) {
 async function loadRentals() {
   loading.value = true
   try {
-    const userId = localStorage.getItem("userId")
-    const data = await rentalService.getUserRentals(userId)
-    rentals.value = (data || []).filter(r => r.status === "Pending") // giỏ chứa Pending
+    const data = await rentalService.getMyRentals()
+    // Giỏ: chỉ Pending
+    rentals.value = (data || []).filter(r => r.status === "Pending")
   } finally {
     loading.value = false
   }
 }
 
-/* ============= OPEN MODAL ============= */
+/* ============= OPEN / CLOSE MODAL ============= */
 function openEditRentalModal(rental) {
   editingRental.value = rental
   editStartDate.value = formatDateForInput(rental.startDate)
@@ -195,16 +199,14 @@ function closeEditModal() {
 /* ============= SAVE EDIT DATES ============= */
 async function saveEditDates() {
   if (!editingRental.value) return
-
   try {
     await rentalService.updateRentalDates(
       editingRental.value.id,
       editStartDate.value,
       editEndDate.value
     )
-
     alert("Đã cập nhật ngày thuê.")
-    await loadRentals() // refresh giỏ
+    await loadRentals()
     closeEditModal()
   } catch (err) {
     alert("Lỗi cập nhật: " + (err.response?.data?.message || err.message))
@@ -212,22 +214,14 @@ async function saveEditDates() {
 }
 
 /* ============= CLEAR CART ============= */
-async function clearCart(rentalId) {
+function clearCart(rentalId) {
   if (!confirm("Bạn có chắc muốn xóa đơn thuê này khỏi giỏ?")) return
-  try {
-    // Xóa đơn bằng backend hoặc fake remove local (nếu backend chưa có API xóa)
-    rentals.value = rentals.value.filter(r => r.id !== rentalId)
-  } catch (err) {
-    console.error(err)
-  }
+  rentals.value = rentals.value.filter(r => r.id !== rentalId)
 }
 
 /* ============= CHECKOUT ============= */
 function proceedToCheckout(rental) {
-  router.push({
-    path: "/rentalCheckout",
-    query: { rentalId: rental.id }
-  })
+  router.push({ path: "/rentalCheckout", query: { rentalId: rental.id } })
 }
 
 onMounted(loadRentals)

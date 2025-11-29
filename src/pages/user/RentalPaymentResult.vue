@@ -131,7 +131,6 @@ async function initRentalPayment() {
           if (!wasPaid && isPaid.value) showSuccess.value = true;
         },
         50000, // interval 5 giây
-        120,  // maxAttempts = 120 → ~10 phút
         rental.value.devUserId
       );
     }

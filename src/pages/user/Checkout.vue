@@ -55,15 +55,6 @@
                 </select>
               </div>
 
-              <!-- Phương thức thanh toán -->
-              <div class="mb-3">
-                <label class="form-label">Phương thức thanh toán</label>
-                <select v-model="checkout.paymentMethod" class="form-select">
-                  <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-                  <option value="QR">Thanh toán QR/PayOS</option>
-                </select>
-              </div>
-
               <!-- Voucher -->
               <div class="mb-3">
                 <label class="form-label">Mã giảm giá</label>
@@ -80,6 +71,17 @@
                 </div>
               </div>
 
+
+              <!-- Phương thức thanh toán -->
+              <div class="mb-3">
+                <label class="form-label">Phương thức thanh toán</label>
+                <select v-model="checkout.paymentMethod" class="form-select">
+                  <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                  <option value="QR">Thanh toán QR/PayOS</option>
+                </select>
+              </div>
+
+             
               <!-- Submit -->
               <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" :disabled="loading">
                 <span v-if="loading">
@@ -151,16 +153,15 @@ import { useRouter } from "vue-router";
 import checkoutService from "@/services/checkoutService";
 import locationService from "@/services/locationService";
 import shippingService from "@/services/shippingService";
+import VoucherService from "@/services/voucherService"; // ✅ Import VoucherService
 
 const cartStore = useCartStore();
 const authStore = useAuthStore();
 const router = useRouter();
 
-// Reactive access to cart items and subtotal
 const cartItems = computed(() => cartStore.items || []);
 const total = computed(() => cartStore.totalAmount || 0);
 
-// Load cart and provinces
 onMounted(() => {
   cartStore.loadCart();
   loadProvinces();
@@ -217,7 +218,6 @@ function getShippingFeeById(id) {
   return opt ? opt.shipping_fee : 0;
 }
 
-// Load địa chỉ
 async function loadProvinces() { try { provinces.value = await locationService.getProvinces(); } catch(e){console.error(e);} }
 async function loadDistricts(provinceId) { try { districts.value = await locationService.getDistricts(provinceId); } catch(e){console.error(e);} }
 async function loadWards(districtId) { try { wards.value = await locationService.getWards(districtId); } catch(e){console.error(e);} }
@@ -255,19 +255,29 @@ watch(
   }
 );
 
+// =====================
 // Voucher
+// =====================
 async function applyVoucherCode() {
   if (!voucherCode.value.trim()) { voucherError.value="Vui lòng nhập mã giảm giá."; return; }
   voucherError.value=null; voucherSuccess.value=null; loadingVoucher.value=true;
   try {
-    const res = await checkoutService.applyVoucher?.(voucherCode.value, total.value, selectedShippingFee.value) || { discount:0, voucherCode:null };
-    voucherDiscount.value = res.discount || 0; 
+    // ✅ Gọi VoucherService
+    const res = await VoucherService.apply(voucherCode.value, total.value, selectedShippingFee.value);
+    voucherDiscount.value = res.totalDiscount || 0; 
     voucherSuccess.value = res.voucherCode || null;
-  } catch(e){ voucherError.value="Mã không hợp lệ hoặc đã hết hạn."; voucherDiscount.value=0; console.error(e); }
-  finally { loadingVoucher.value=false; }
+    voucherError.value = null;
+  } catch(e){
+    voucherError.value = e?.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn.";
+    voucherDiscount.value = 0;
+    voucherSuccess.value = null;
+    console.error(e);
+  } finally { loadingVoucher.value=false; }
 }
 
-// Submit
+// =====================
+// Submit Order
+// =====================
 async function submitOrder() {
   if (!authStore.isLoggedIn) { alert("Vui lòng đăng nhập trước khi thanh toán."); router.push("/login"); return; }
   if (!checkout.value.address || !checkout.value.toProvinceId || !checkout.value.toDistrictId || !checkout.value.toWardCode) { alert("Vui lòng chọn đầy đủ địa chỉ giao hàng."); return; }
@@ -318,8 +328,8 @@ async function submitOrder() {
 }
 
 function goToOrders() { showSuccess.value=false; router.push("/order"); }
-</script>
 
+</script>
 
 <style scoped>
 .checkout-container { animation: fadeIn 0.5s ease-in-out; }

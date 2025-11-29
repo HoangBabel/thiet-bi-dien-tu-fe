@@ -9,42 +9,50 @@
           <div class="card-header text-white bg-gradient-primary fw-semibold">
             Thông tin giao hàng
           </div>
+
           <div class="card-body">
             <form @submit.prevent="submitOrder">
+              
               <!-- Địa chỉ -->
               <div class="mb-3">
                 <label class="form-label">Địa chỉ</label>
                 <textarea v-model="checkout.ShippingAddress" class="form-control" rows="2" required></textarea>
               </div>
 
-              <!-- Tỉnh/Thành phố -->
+              <!-- Tỉnh -->
               <div class="mb-3">
                 <label class="form-label">Tỉnh/Thành phố</label>
                 <select v-model="checkout.ToProvinceId" @change="onProvinceChange" class="form-select" required>
                   <option value="" disabled>Chọn tỉnh/thành phố</option>
-                  <option v-for="p in provinces" :key="p.ProvinceID" :value="p.ProvinceID">{{ p.ProvinceName }}</option>
+                  <option v-for="p in provinces" :key="p.ProvinceID" :value="p.ProvinceID">
+                    {{ p.ProvinceName }}
+                  </option>
                 </select>
               </div>
 
-              <!-- Quận/Huyện -->
+              <!-- Huyện -->
               <div class="mb-3">
                 <label class="form-label">Quận/Huyện</label>
                 <select v-model="checkout.ToDistrictId" @change="onDistrictChange" class="form-select" required>
                   <option value="" disabled>Chọn quận/huyện</option>
-                  <option v-for="d in districts" :key="d.DistrictID" :value="d.DistrictID">{{ d.DistrictName }}</option>
+                  <option v-for="d in districts" :key="d.DistrictID" :value="d.DistrictID">
+                    {{ d.DistrictName }}
+                  </option>
                 </select>
               </div>
 
-              <!-- Phường/Xã -->
+              <!-- Xã -->
               <div class="mb-3">
                 <label class="form-label">Phường/Xã</label>
                 <select v-model="checkout.ToWardCode" class="form-select" required>
                   <option value="" disabled>Chọn phường/xã</option>
-                  <option v-for="w in wards" :key="w.WardCode" :value="w.WardCode">{{ w.WardName }}</option>
+                  <option v-for="w in wards" :key="w.WardCode" :value="w.WardCode">
+                    {{ w.WardName }}
+                  </option>
                 </select>
               </div>
 
-              <!-- Loại dịch vụ vận chuyển -->
+              <!-- Shipping service -->
               <div class="mb-3">
                 <label class="form-label">Loại dịch vụ vận chuyển</label>
                 <select v-model="checkout.ServiceId" class="form-select">
@@ -52,15 +60,6 @@
                   <option v-for="s in shippingOptions" :key="s.service_id" :value="s.service_id">
                     {{ s.service_type }} - {{ formatCurrency(s.shipping_fee) }}
                   </option>
-                </select>
-              </div>
-
-              <!-- Phương thức thanh toán -->
-              <div class="mb-3">
-                <label class="form-label">Phương thức thanh toán</label>
-                <select v-model="checkout.PaymentMethod" class="form-select">
-                  <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-                  <option value="QR">Thanh toán QR/PayOS</option>
                 </select>
               </div>
 
@@ -74,53 +73,83 @@
                     Áp dụng
                   </button>
                 </div>
-                <div v-if="voucherError" class="text-danger mt-2 small">{{ voucherError }}</div>
-                <div v-if="voucherSuccess" class="text-success mt-2 small">
+
+                <div v-if="voucherError" class="text-danger small mt-2">{{ voucherError }}</div>
+
+                <div v-if="voucherSuccess" class="text-success small mt-2">
                   ✅ Giảm {{ formatCurrency(voucherDiscount) }} với mã "{{ voucherSuccess }}"
                 </div>
               </div>
 
-              <!-- Submit -->
+              <!-- Payment -->
+              <div class="mb-3">
+                <label class="form-label">Phương thức thanh toán</label>
+                <select v-model="checkout.PaymentMethod" class="form-select">
+                  <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                  <option value="QR">Thanh toán QR/PayOS</option>
+                </select>
+              </div>
+
               <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" :disabled="loading">
                 <span v-if="loading">
                   <span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...
                 </span>
                 <span v-else>💳 Xác nhận thanh toán</span>
               </button>
+
             </form>
           </div>
         </div>
       </div>
 
-      <!-- Tóm tắt đơn hàng -->
+      <!-- Summary -->
       <div class="col-md-6">
         <div class="card shadow border-0 order-summary">
-          <div class="card-header text-white bg-gradient-secondary fw-semibold">
-            Tóm tắt đơn hàng
-          </div>
+          <div class="card-header text-white bg-gradient-secondary fw-semibold">Tóm tắt đơn hàng</div>
+
           <ul class="list-group list-group-flush">
-            <li v-for="item in cart" :key="item.id" class="list-group-item d-flex justify-content-between align-items-center">
-              <span>{{ item.name }} (x{{ item.quantity }})</span>
-              <strong>{{ formatCurrency(item.price * item.quantity) }}</strong>
+
+            <li v-for="item in rentalItems" :key="item.id"
+                class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                {{ item.productName }} (x{{ item.quantity }})
+                <div class="text-muted small">
+                  Số ngày: {{ item.units }},
+                  Đơn giá: {{ formatCurrency(item.pricePerUnitAtBooking) }}
+                </div>
+              </div>
+              <strong>{{ formatCurrency(item.subTotal) }}</strong>
             </li>
+
+            <li v-if="rentalData?.depositPaid"
+                class="list-group-item d-flex justify-content-between text-warning">
+              <span>Cọc đã thanh toán:</span>
+              <strong>{{ formatCurrency(rentalData.depositPaid) }}</strong>
+            </li>
+
             <li class="list-group-item d-flex justify-content-between">
               <span>Phí vận chuyển:</span>
               <strong>{{ formatCurrency(selectedShippingFee) }}</strong>
             </li>
-            <li v-if="voucherDiscount > 0" class="list-group-item d-flex justify-content-between text-success">
+
+            <!-- Voucher display -->
+            <li v-if="voucherDiscount > 0"
+                class="list-group-item d-flex justify-content-between text-success">
               <span>Giảm giá:</span>
               <strong>-{{ formatCurrency(voucherDiscount) }}</strong>
             </li>
+
             <li class="list-group-item d-flex justify-content-between fw-bold fs-5 bg-light">
               <span>Tổng cộng:</span>
-              <span class="text-success">{{ formatCurrency(finalTotal) }}</span>
+              <span class="text-success">{{ formatCurrency(finalTotalWithDeposit) }}</span>
             </li>
+
           </ul>
         </div>
       </div>
     </div>
 
-    <!-- Popup Success -->
+    <!-- Success Popup -->
     <div v-if="showSuccess" class="popup-overlay d-flex align-items-center justify-content-center">
       <div class="popup-card text-center p-4 shadow-lg bg-white rounded-4">
         <div class="icon mb-3">
@@ -136,26 +165,23 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useCartStore } from "@/stores/cart";
-import { useAuthStore } from "@/stores/auth";
 import { useRouter, useRoute } from "vue-router";
 
+import rentalService from "@/services/RentalService";
 import rentalCheckoutService from "@/services/rentalCheckoutService";
 import locationService from "@/services/locationService";
 import shippingService from "@/services/shippingService";
 import payosService from "@/services/payosService";
+import { useAuthStore } from "@/stores/auth";
 
-const cartStore = useCartStore();
-const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
 
 const rentalId = Number(route.query.rentalId || 0);
-const devUserId = route.query.devUserId ? Number(route.query.devUserId) : null;
-cartStore.rentalId = rentalId;
 
-const cart = cartStore.items;
-const total = computed(() => cartStore.totalAmount);
+const rentalData = ref(null);
+const rentalItems = ref([]);
 
 const checkout = ref({
   ShippingAddress: "",
@@ -163,19 +189,20 @@ const checkout = ref({
   ToProvinceId: null,
   ToDistrictId: null,
   ToWardCode: "",
-  ServiceId: 53321,
+  ServiceId: null,
   Weight: 200,
   Length: 20,
   Width: 20,
   Height: 20
 });
 
+// Location data
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
 const shippingOptions = ref([]);
-const serviceTypes = ref([]);
 
+// Voucher state
 const voucherCode = ref("");
 const voucherDiscount = ref(0);
 const voucherSuccess = ref(null);
@@ -185,23 +212,41 @@ const loadingVoucher = ref(false);
 const loading = ref(false);
 const showSuccess = ref(false);
 
+// Shipping fee
 const selectedShippingFee = computed(() => {
-  const option = shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId);
-  return option ? option.shipping_fee : 0;
+  const opt = shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId);
+  return opt ? opt.shipping_fee : 0;
 });
 
-const finalTotal = computed(() => total.value + selectedShippingFee.value - voucherDiscount.value);
+// Total
+const finalTotalWithDeposit = computed(() => {
+  const itemsTotal = rentalItems.value.reduce((s, i) => s + i.subTotal, 0);
+  const deposit = rentalData.value?.depositPaid || 0;
+  return itemsTotal + selectedShippingFee.value - voucherDiscount.value + deposit;
+});
 
-function formatCurrency(value) {
-  return value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫";
+// Currency
+function formatCurrency(v) {
+  return v?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫";
 }
 
-// ==========================
-// Load locations
-// ==========================
-async function loadProvinces() { try { provinces.value = await locationService.getProvinces(); } catch(e){console.error(e);} }
-async function loadDistricts(provinceId) { try { districts.value = await locationService.getDistricts(provinceId); } catch(e){console.error(e);} }
-async function loadWards(districtId) { try { wards.value = await locationService.getWards(districtId); } catch(e){console.error(e);} }
+// Load rental
+async function loadRentalData() {
+  try {
+    const data = await rentalService.getRentalById(rentalId);
+    rentalData.value = data;
+
+    rentalItems.value = data.items.map(i => ({
+      ...i,
+      subTotal: i.pricePerUnitAtBooking * i.quantity * i.units
+    }));
+  } catch (e) { console.error(e); }
+}
+
+// Location
+async function loadProvinces() { provinces.value = await locationService.getProvinces(); }
+async function loadDistricts(id) { districts.value = await locationService.getDistricts(id); }
+async function loadWards(id) { wards.value = await locationService.getWards(id); }
 
 function onProvinceChange() {
   checkout.value.ToDistrictId = null;
@@ -210,139 +255,126 @@ function onProvinceChange() {
   wards.value = [];
   loadDistricts(checkout.value.ToProvinceId);
 }
+
 function onDistrictChange() {
   checkout.value.ToWardCode = "";
   wards.value = [];
   loadWards(checkout.value.ToDistrictId);
 }
 
-// ==========================
-// Watch for shipping changes
-// ==========================
+// Recalculate shipping
 watch(
-  [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode, () => checkout.value.Weight],
+  [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode],
   async () => {
     if (!checkout.value.ToDistrictId || !checkout.value.ToWardCode) return;
+
     try {
       shippingOptions.value = await shippingService.calculateShipping({
         to_district_id: checkout.value.ToDistrictId,
         to_ward_code: checkout.value.ToWardCode,
         weight: checkout.value.Weight
       });
-      serviceTypes.value = shippingOptions.value.map(s => ({ service_id: s.service_id, service_type: s.service_type }));
+
       if (!shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId)) {
         checkout.value.ServiceId = shippingOptions.value[0]?.service_id || null;
       }
-    } catch(e){ shippingOptions.value=[]; console.error(e); }
+    } catch (e) {
+      shippingOptions.value = [];
+    }
   }
 );
 
-// ==========================
-// Voucher
-// ==========================
+// Apply voucher
 async function applyVoucherCode() {
-  if(!voucherCode.value.trim()) { voucherError.value="Vui lòng nhập mã giảm giá."; return; }
-  voucherError.value=null; voucherSuccess.value=null; loadingVoucher.value=true;
+  if (!voucherCode.value.trim()) {
+    voucherError.value = "Vui lòng nhập mã giảm giá.";
+    return;
+  }
+
+  voucherError.value = null;
+  voucherSuccess.value = null;
+  loadingVoucher.value = true;
+
   try {
-    const result = await rentalCheckoutService.validateVoucher({ rentalId, code: voucherCode.value.trim() });
+    const result = await rentalCheckoutService.validateVoucher({
+      rentalId,
+      code: voucherCode.value.trim()
+    });
+
     voucherDiscount.value = result.discount || 0;
     voucherSuccess.value = result.code;
-  } catch(e){ voucherError.value="Mã không hợp lệ."; console.error(e); }
-  finally { loadingVoucher.value=false; }
+
+  } catch (e) {
+    voucherError.value = "Mã không hợp lệ.";
+  }
+  loadingVoucher.value = false;
 }
 
-// ==========================
-// Submit rental order
-// ==========================
+// Submit order
 async function submitOrder() {
-  if (!authStore.isLoggedIn && !devUserId) {
+  if (!authStore.isLoggedIn) {
     alert("Vui lòng đăng nhập.");
     router.push("/login");
     return;
   }
 
-  if (!checkout.value.ShippingAddress || !checkout.value.ToProvinceId || !checkout.value.ToDistrictId || !checkout.value.ToWardCode) {
+  if (!checkout.value.ShippingAddress ||
+      !checkout.value.ToProvinceId ||
+      !checkout.value.ToDistrictId ||
+      !checkout.value.ToWardCode) {
     alert("Vui lòng chọn đầy đủ địa chỉ giao hàng.");
     return;
   }
 
   loading.value = true;
-  voucherError.value = null;
-  voucherSuccess.value = null;
 
   try {
     const payload = {
       RentalId: rentalId,
       ShippingAddress: checkout.value.ShippingAddress,
+
       ToProvinceId: checkout.value.ToProvinceId,
-      ToProvinceName: provinces.value.find(p => p.ProvinceID === checkout.value.ToProvinceId)?.ProvinceName,
+      ToProvinceName: provinces.value.find(x => x.ProvinceID === checkout.value.ToProvinceId)?.ProvinceName,
+
       ToDistrictId: checkout.value.ToDistrictId,
-      ToDistrictName: districts.value.find(d => d.DistrictID === checkout.value.ToDistrictId)?.DistrictName,
+      ToDistrictName: districts.value.find(x => x.DistrictID === checkout.value.ToDistrictId)?.DistrictName,
+
       ToWardCode: checkout.value.ToWardCode,
-      ToWardName: wards.value.find(w => w.WardCode === checkout.value.ToWardCode)?.WardName,
+      ToWardName: wards.value.find(x => x.WardCode === checkout.value.ToWardCode)?.WardName,
+
       ServiceId: checkout.value.ServiceId,
       Weight: checkout.value.Weight,
       Length: checkout.value.Length,
       Width: checkout.value.Width,
       Height: checkout.value.Height,
+
       PaymentMethod: checkout.value.PaymentMethod === "QR" ? 1 : 0,
-      VoucherCode: voucherCode.value.trim() || null,
-      devUserId: devUserId
+      VoucherCode: voucherCode.value.trim() || null
     };
 
     const result = await rentalCheckoutService.checkoutRental(payload);
-    voucherDiscount.value = result.discount || 0;
+
     if (result.voucherCode) voucherSuccess.value = result.voucherCode;
+    voucherDiscount.value = result.discount || 0;
 
-    // === QR Payment ===
+    // QR Payment
     if (checkout.value.PaymentMethod === "QR") {
-      const payResult = await payosService.getRentalPaymentLink(result.rentalId, devUserId);
+      const payResult = await payosService.getRentalPaymentLink(result.rentalId);
 
-      result.paymentLinkId = payResult.paymentLinkId;
-      result.paymentUrl = payResult.paymentUrl;
-      result.qrCode = payResult.qrCode;
-      result.status = payResult.status;
-
-      // Poll trạng thái thanh toán
-      const stopPolling = payosService.pollRentalPaymentStatus(
-        result.rentalId,
-        (updatedRental) => {
-          if ((updatedRental.status === "Active" || updatedRental.paymentStatus === "PAID") && !showSuccess.value) {
-            showSuccess.value = true;
-            cartStore.clearCart();
-            stopPolling();
-          }
-        },
-        5000,
-        60,
-        devUserId
-      );
-
-      // Điều hướng sang trang kết quả thanh toán
       router.push({
         path: "/rental-payment-result",
-        query: { rentalData: JSON.stringify(result) }
+        query: { rentalData: JSON.stringify(payResult) }
       });
       return;
     }
 
-    // === COD ===
-    if (checkout.value.PaymentMethod === "COD" || result.status === "Paid") {
-      cartStore.clearCart();
-      showSuccess.value = true;
-    }
+    showSuccess.value = true;
 
   } catch (err) {
-    console.error("❌ Lỗi khi thanh toán:", err.response?.data || err.message);
-    const message =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      err.message ||
-      "Lỗi khi thanh toán.";
-    alert(message);
-  } finally {
-    loading.value = false;
+    alert("Lỗi khi thanh toán: " + (err.message || ""));
   }
+
+  loading.value = false;
 }
 
 function goToOrders() {
@@ -350,10 +382,10 @@ function goToOrders() {
   router.push("/rentalOrder");
 }
 
-// ==========================
-// Mounted
-// ==========================
-onMounted(() => { loadProvinces(); });
+onMounted(() => {
+  loadRentalData();
+  loadProvinces();
+});
 </script>
 
 <style scoped>

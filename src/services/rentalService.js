@@ -9,35 +9,34 @@ function authHeader() {
 
 export default {
   // ============================
-  //  LẤY DANH SÁCH ĐƠN NGƯỜI DÙNG (Dựa trên JWT)
+  //  LẤY DANH SÁCH ĐƠN NGƯỜI DÙNG (dựa trên token)
   // ============================
   async getMyRentals() {
     const res = await axios.get(`${API_URL}/user`, {
       headers: authHeader(),
     });
-    // Trả về array RentalDto với đầy đủ thông tin Payment
+    // Backend trả về List<RentalDto>
     return res.data;
   },
+
   // ============================
-  //  LẤY DANH SÁCH ĐƠN NGƯỜI DÙNG
+  //  LẤY DANH SÁCH ĐƠN CỦA 1 USER CỤ THỂ (Admin)
   // ============================
   async getUserRentals(userId) {
     const res = await axios.get(`${API_URL}/user/${userId}`, {
       headers: authHeader(),
     });
-    // Trả về array RentalDto
     return res.data; 
   },
 
   // ============================
-  //  LẤY CHI TIẾT ĐƠN
+  //  LẤY CHI TIẾT ĐƠN THUÊ
   // ============================
   async getRentalById(rentalId) {
     const res = await axios.get(`${API_URL}/${rentalId}`, {
       headers: authHeader(),
     });
-    // Trả về RentalDto
-    return res.data;
+    return res.data; // trả về RentalDto
   },
 
   // ============================
@@ -47,12 +46,12 @@ export default {
     const res = await axios.post(API_URL, createDto, {
       headers: authHeader(),
     });
-    // Trả về CreateDailyRentalResponseDto
+    // trả về CreateDailyRentalResponseDto (có PaymentUrl, QrcodeUrl,…)
     return res.data;
   },
 
   // ===========================================================
-  //  🔄 CẬP NHẬT NGÀY THUÊ — PUT /api/DailyRentals/{id}/dates
+  //  CẬP NHẬT NGÀY THUÊ
   // ===========================================================
   async updateRentalDates(rentalId, startDate, endDate) {
     const formatDate = (d) => {
@@ -86,7 +85,7 @@ export default {
   },
 
   // ============================
-  //  QUYẾT TOÁN
+  //  QUYẾT TOÁN (Settle)
   // ============================
   async settleRental(rentalId, settleDto) {
     const res = await axios.post(`${API_URL}/${rentalId}/settle`, settleDto, {
@@ -96,22 +95,22 @@ export default {
   },
 
   // ============================
-  //  QUOTE GIÁ TRƯỚC
+  //  LẤY QUOTE GIÁ TẠM TÍNH
   // ============================
   async getQuote(quoteDto) {
     const res = await axios.post(`${API_URL}/quote`, quoteDto, {
       headers: authHeader(),
     });
-    return res.data;
+    return res.data; // backend trả về DailyRentalQuoteDto
   },
 
   // ============================
-  //  LẤY TẤT CẢ ĐƠN ADMIN
+  //  LẤY TẤT CẢ ĐƠN (Admin)
   // ============================
   async getAllRentals() {
     const res = await axios.get(`${API_URL}/admin/all`, {
       headers: authHeader(),
     });
-    return res.data; // array RentalDto
+    return res.data; // list RentalDto
   },
 };

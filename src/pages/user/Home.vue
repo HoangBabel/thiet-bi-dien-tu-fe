@@ -148,6 +148,44 @@
       </div>
     </section>
 
+    <!-- 🎁 Ưu đãi mã giảm giá -->
+    <section class="mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="fw-bold text-dark mb-0">🎁 Mã Giảm Giá Hiện Có</h3>
+      <router-link to="/vouchers" class="btn btn-outline-primary btn-sm">
+        Xem tất cả
+      </router-link>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-3 col-sm-6" v-for="v in randomVouchers" :key="v.voucherId">
+        <div class="card shadow-sm h-100 voucher-card p-3">
+          <h5 class="fw-bold text-primary">{{ v.code }}</h5>
+          <p class="text-muted small mb-1">{{ v.description }}</p>
+
+          <p class="fw-bold text-success">
+            Giảm:
+            <span v-if="v.discountType === 'percent'">
+              {{ v.discountValue }}%
+            </span>
+            <span v-else>
+              {{ formatPrice(v.discountValue) }}
+            </span>
+          </p>
+
+          <button class="btn btn-primary btn-sm mt-auto" @click="copyVoucher(v.code)">
+            <i class="bi bi-clipboard"></i> Copy mã
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="randomVouchers.length === 0" class="text-center text-muted mt-4">
+      <i class="bi bi-ticket fs-3 d-block mb-2"></i>
+      Hiện chưa có mã giảm giá nào.
+    </div>
+    </section>
+
     <!-- Ưu điểm nền tảng -->
     <section class="benefit-section mt-5 py-4 rounded-4 shadow-sm">
       <div class="row text-center">
@@ -172,125 +210,158 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue"
-import api from "@/services/api"
-import cartApi from "@/services/cartService"
-import rentalService from "@/services/rentalService"
-import defaultImage from "@/assets/no-image.png"
-import { useRouter } from "vue-router"
+import { ref, onMounted, computed } from "vue";
+import api from "@/services/api";
+import cartApi from "@/services/cartService";
+import rentalService from "@/services/rentalService";
+import voucherService from "@/services/voucherService";
+import defaultImage from "@/assets/no-image.png";
+import { useRouter } from "vue-router";
 
-const backendUrl = "https://localhost:44303"
-const featured = ref([])
-const adding = ref({})
-const creating = ref({})
-const alertMessages = ref({})
-const alertTypes = ref({})
-const categories = ref([])
-const router = useRouter()
+const backendUrl = "https://localhost:44303";
+const featured = ref([]);
+const adding = ref({});
+const creating = ref({});
+const alertMessages = ref({});
+const alertTypes = ref({});
+const categories = ref([]);
+const vouchers = ref([]);
+const router = useRouter();
+const randomVouchers = computed(() =>
+  shuffleArray(vouchers.value).slice(0, 4)
+);
 
 function shuffleArray(arr) {
   return arr
-    .map(value => ({ value, sort: Math.random() }))
+    .map(v => ({ v, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
-    .map(({ value }) => value)
+    .map(({ v }) => v);
+}
+
+// 🚀 Load voucher từ VoucherService
+async function loadVouchers() {
+  try {
+    const res = await voucherService.getAll(); 
+    vouchers.value = res || [];
+  } catch (err) {
+    console.error("Lỗi tải voucher:", err);
+  }
+}
+
+function copyVoucher(code) {
+  navigator.clipboard.writeText(code);
+  alert("Đã copy mã: " + code);
 }
 
 async function loadFeatured() {
   try {
-    const res = await api.get("/Product")
-    featured.value = res.data
+    const res = await api.get("/Product");
+    featured.value = res.data;
   } catch (err) {
-    console.error("Lỗi tải sản phẩm nổi bật:", err)
+    console.error("Lỗi tải sản phẩm nổi bật:", err);
   }
 }
 
 async function loadCategories() {
   try {
-    const res = await api.get("/Category")
-    categories.value = res.data
+    const res = await api.get("/Category");
+    categories.value = res.data;
   } catch (err) {
-    console.error("Lỗi tải danh mục:", err)
+    console.error("Lỗi tải danh mục:", err);
   }
 }
 
-const shuffledBuyProducts = computed(() => shuffleArray(featured.value.filter(p => !p.isRental)).slice(0, 4))
-const shuffledRentalProducts = computed(() => shuffleArray(featured.value.filter(p => p.isRental)).slice(0, 4))
+const shuffledBuyProducts = computed(() =>
+  shuffleArray(featured.value.filter(p => !p.isRental)).slice(0, 4)
+);
+const shuffledRentalProducts = computed(() =>
+  shuffleArray(featured.value.filter(p => p.isRental)).slice(0, 4)
+);
 
 function formatPrice(value) {
-  return value ? value.toLocaleString("vi-VN") + " ₫" : "0 ₫"
+  return value ? value.toLocaleString("vi-VN") + " ₫" : "0 ₫";
 }
 
 function getImageUrl(path) {
-  if (!path) return defaultImage
-  return path.startsWith("http") ? path : `${backendUrl}/${path.replace(/^\/+/, "")}`
+  if (!path) return defaultImage;
+  return path.startsWith("http") ? path : `${backendUrl}/${path.replace(/^\/+/, "")}`;
 }
 
 function handleImageError(e) {
-  e.target.src = defaultImage
+  e.target.src = defaultImage;
 }
 
 function getCategoryName(id) {
-  const c = categories.value.find((x) => x.categoryId === id)
-  return c ? c.name : "Không có danh mục"
+  const c = categories.value.find(x => x.categoryId === id);
+  return c ? c.name : "Không có danh mục";
 }
 
 function showAlertForProduct(productId, message, type = "success") {
-  alertMessages.value[productId] = message
-  alertTypes.value[productId] = type
+  alertMessages.value[productId] = message;
+  alertTypes.value[productId] = type;
   setTimeout(() => {
-    alertMessages.value[productId] = ""
-  }, 3000)
+    alertMessages.value[productId] = "";
+  }, 3000);
 }
 
 async function addToCart(productId) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(productId, "Vui lòng đăng nhập để thêm sản phẩm!", "danger")
-    router.push("/login")
-    return
+    showAlertForProduct(productId, "Vui lòng đăng nhập để thêm sản phẩm!", "danger");
+    router.push("/login");
+    return;
   }
   try {
-    adding.value[productId] = true
-    await cartApi.addItem(productId, 1)
-    showAlertForProduct(productId, "✅ Đã thêm sản phẩm vào giỏ!", "success")
+    adding.value[productId] = true;
+    await cartApi.addItem(productId, 1);
+    showAlertForProduct(productId, "✔ Đã thêm sản phẩm vào giỏ!", "success");
   } catch (err) {
-    console.error(err)
-    showAlertForProduct(productId, "❌ Không thể thêm sản phẩm!", "danger")
+    console.error(err);
+    showAlertForProduct(productId, "❌ Không thể thêm sản phẩm!", "danger");
   } finally {
-    adding.value[productId] = false
+    adding.value[productId] = false;
   }
 }
 
 async function createRental(p) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(p.idProduct, "Vui lòng đăng nhập để tạo đơn thuê!", "danger")
-    router.push("/login")
-    return
+    showAlertForProduct(p.idProduct, "Vui lòng đăng nhập để tạo đơn thuê!", "danger");
+    router.push("/login");
+    return;
   }
-  creating.value[p.idProduct] = true
-  const startDate = new Date()
-  const endDate = new Date()
-  endDate.setDate(startDate.getDate() + 7)
+  creating.value[p.idProduct] = true;
+
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setDate(startDate.getDate() + 7);
+
   const payload = {
     productId: p.idProduct,
     quantity: 1,
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString()
-  }
+  };
+
   try {
-    await rentalService.createRental(payload)
-    showAlertForProduct(p.idProduct, `✅ Tạo đơn thuê thành công!`, "success")
+    await rentalService.createRental(payload);
+    showAlertForProduct(p.idProduct, "✔ Tạo đơn thuê thành công!", "success");
   } catch (err) {
-    console.error(err)
-    showAlertForProduct(p.idProduct, err.response?.data || err.message || "❌ Không thể tạo đơn thuê!", "danger")
+    console.error(err);
+    showAlertForProduct(
+      p.idProduct,
+      err.response?.data || err.message || "❌ Không thể tạo đơn thuê!",
+      "danger"
+    );
   } finally {
-    creating.value[p.idProduct] = false
+    creating.value[p.idProduct] = false;
   }
 }
 
+// 🚀 Load tất cả dữ liệu khi vào trang
 onMounted(() => {
-  loadCategories()
-  loadFeatured()
-})
+  loadCategories();
+  loadFeatured();
+  loadVouchers(); // <--- thêm vào
+});
 </script>
 
 <style scoped>
@@ -380,5 +451,17 @@ onMounted(() => {
 }
 .text-primary {
   color: #003366 !important;
+}
+
+.voucher-card {
+  border-radius: 14px;
+  border: 1px dashed #003366;
+  background: #f8fbff;
+  transition: transform 0.2s ease;
+}
+
+.voucher-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 </style>
