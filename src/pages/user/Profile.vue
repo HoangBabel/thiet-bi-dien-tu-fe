@@ -160,14 +160,22 @@ const twoFAEnabled = ref(false);
 
 // 🖼️ Avatar hiển thị chính xác sau khi đổi ảnh
 const resolvedAvatar = computed(() => {
-  const avatar = user.value.avatarUrl || user.value.avatar;
-  if (!avatar) {
+  const raw = user.value.avatarUrl || user.value.avatar;
+
+  // Avatar mặc định
+  if (!raw) {
     return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   }
-  if (avatar.startsWith("/")) {
-    return `https://localhost:44303${avatar}`;
+
+  // Nếu BE trả đường dẫn nội bộ (ví dụ: uploads/users/xxx.jpg)
+  if (!raw.startsWith("http")) {
+    const cleanPath = raw.replace(/^\/+/, ""); // bỏ dấu /
+
+    return `https://localhost:44303/${cleanPath}?v=${Date.now()}`;
   }
-  return avatar;
+
+  // Nếu là full URL
+  return `${raw}?v=${Date.now()}`;
 });
 
 // 📅 Định dạng ngày

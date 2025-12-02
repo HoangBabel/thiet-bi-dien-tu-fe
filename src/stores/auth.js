@@ -14,11 +14,22 @@ export const useAuthStore = defineStore("auth", {
     isLoggedIn: (state) => !!state.token,
     userId: (state) => state.user?.id || null,
     userRole: (state) => state.user?.role || "User",
+    avatarUrl: (state) => {
+      if (!state.user) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      const raw = state.user.avatarUrl || state.user.avatar;
+      if (!raw) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      if (!raw.startsWith("http")) {
+        const clean = raw.replace(/^\/+/, "");
+        return `https://localhost:44303/${clean}?v=${Date.now()}`;
+      }
+      return `${raw}?v=${Date.now()}`;
+    },
+    displayName: (state) => state.user?.fullName || state.user?.username || "Tài khoản",
   },
 
   actions: {
     /* =====================================================
-       🟢 ĐĂNG NHẬP - BƯỚC 1
+       🟢 ĐĂNG NHẬP
     ===================================================== */
     async login(email, password) {
       try {
@@ -31,7 +42,7 @@ export const useAuthStore = defineStore("auth", {
         }
 
         if (res.data?.token && res.data?.user) {
-          this.applyAuthData(res.data);
+          await this.applyAuthData(res.data);
           return res.data;
         }
 
@@ -45,47 +56,29 @@ export const useAuthStore = defineStore("auth", {
     /* =====================================================
        🔑 XÁC NHẬN MÃ 2FA
     ===================================================== */
-   async verify2FA(code) {
-  try {
-    if (!this.pendingEmail) throw new Error("Không tìm thấy email đang chờ xác thực.");
-
-    const res = await userService.verify2FA(this.pendingEmail, code);
-    const data = res.data || res;
-
-    if (data?.token) {
-      // ✅ 1. Lưu token ngay lập tức
-      this.token = data.token;
-      localStorage.setItem("token", data.token);
-
-      // ✅ 2. Gọi API lấy user (giờ đã có Authorization header)
-      const user = await this.fetchCurrentUser();
-
-      // ✅ 3. Hoàn tất xác thực
-      this.applyAuthData({ token: data.token, user });
-      this.is2FARequired = false;
-      this.pendingEmail = null;
-
-      return { token: data.token, user };
-    }
-
-    throw new Error("Phản hồi xác thực 2FA không hợp lệ.");
-  } catch (err) {
-    console.error("❌ Lỗi xác nhận mã OTP:", err);
-    throw err.response?.data || err;
-  }
-},
-
-    /* =====================================================
-       📩 GỬI LẠI MÃ OTP
-    ===================================================== */
-    async resend2FA(emailParam) {
+    async verify2FA(code) {
       try {
-        const email = emailParam || this.pendingEmail;
-        if (!email) throw new Error("Không có email để gửi lại mã OTP.");
-        const res = await userService.resend2FA(email);
-        return res.data;
+        if (!this.pendingEmail) throw new Error("Không tìm thấy email đang chờ xác thực.");
+
+        const res = await userService.verify2FA(this.pendingEmail, code);
+        const data = res.data || res;
+
+        if (data?.token) {
+          this.token = data.token;
+          localStorage.setItem("token", data.token);
+
+          const user = await this.fetchCurrentUser();
+          await this.applyAuthData({ token: data.token, user });
+
+          this.is2FARequired = false;
+          this.pendingEmail = null;
+
+          return { token: data.token, user };
+        }
+
+        throw new Error("Phản hồi xác thực 2FA không hợp lệ.");
       } catch (err) {
-        console.error("❌ Lỗi gửi lại mã OTP:", err);
+        console.error("❌ Lỗi xác nhận mã OTP:", err);
         throw err.response?.data || err;
       }
     },
@@ -108,28 +101,10 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /* =====================================================
-       🔍 LẤY TRẠNG THÁI 2FA
+       🧭 CẬP NHẬT AUTH SAU LOGIN / VERIFY2FA
     ===================================================== */
-    async get2FAStatus() {
-      try {
-        const res = await userService.get2FAStatus();
-        if (res.data?.isTwoFactorEnabled !== undefined) {
-          this.user.isTwoFactorEnabled = res.data.isTwoFactorEnabled;
-          localStorage.setItem("user", JSON.stringify(this.user));
-        }
-        return res.data;
-      } catch (err) {
-        console.error("❌ Lỗi lấy trạng thái 2FA:", err);
-        throw err.response?.data || err;
-      }
-    },
-
-    /* =====================================================
-       🧭 ÁP DỮ LIỆU AUTH SAU LOGIN / VERIFY2FA
-    ===================================================== */
-    applyAuthData(data) {
-      if (!data?.token || !data?.user)
-        throw new Error("Phản hồi xác thực không hợp lệ.");
+    async applyAuthData(data) {
+      if (!data?.token || !data?.user) throw new Error("Phản hồi xác thực không hợp lệ.");
 
       const user = { ...data.user };
       user.role = this.mapRole(user.role);
@@ -161,7 +136,7 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /* =====================================================
-       ✏️ CẬP NHẬT THÔNG TIN HỒ SƠ
+       ✏️ CẬP NHẬT HỒ SƠ
     ===================================================== */
     async updateProfile(data) {
       try {
@@ -230,15 +205,18 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /* =====================================================
-       🟡 LOAD LOCAL STORAGE
+       🟡 LOAD LOCAL STORAGE VÀ ĐỒNG BỘ USER
     ===================================================== */
-    loadFromStorage() {
+    async loadFromStorage() {
       try {
         const token = localStorage.getItem("token");
         const user = JSON.parse(localStorage.getItem("user") || "null");
         if (token && user) {
           this.token = token;
           this.user = user;
+
+          // ✅ Đồng bộ user mới từ API để avatar luôn chính xác
+          await this.fetchCurrentUser();
         } else {
           this.logout();
         }

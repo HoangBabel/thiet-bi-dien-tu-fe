@@ -57,8 +57,8 @@
                 <label class="form-label">Loại dịch vụ vận chuyển</label>
                 <select v-model="checkout.ServiceId" class="form-select">
                   <option disabled value="">Chọn dịch vụ</option>
-                  <option v-for="s in shippingOptions" :key="s.service_id" :value="s.service_id">
-                    {{ s.service_type }} - {{ formatCurrency(s.shipping_fee) }}
+                  <option v-for="s in serviceTypes" :key="s.service_id" :value="s.service_id">
+                    {{ s.service_type }} - {{ formatCurrency(getShippingFeeById(s.service_id)) }}
                   </option>
                 </select>
               </div>
@@ -201,6 +201,7 @@ const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
 const shippingOptions = ref([]);
+const serviceTypes = ref([]);
 
 // Voucher state
 const voucherCode = ref("");
@@ -230,12 +231,17 @@ function formatCurrency(v) {
   return v?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫";
 }
 
+// Shipping fee helper
+function getShippingFeeById(id) {
+  const opt = shippingOptions.value.find(s => s.service_id === id);
+  return opt ? opt.shipping_fee : 0;
+}
+
 // Load rental
 async function loadRentalData() {
   try {
     const data = await rentalService.getRentalById(rentalId);
     rentalData.value = data;
-
     rentalItems.value = data.items.map(i => ({
       ...i,
       subTotal: i.pricePerUnitAtBooking * i.quantity * i.units
@@ -262,24 +268,25 @@ function onDistrictChange() {
   loadWards(checkout.value.ToDistrictId);
 }
 
-// Recalculate shipping
+// Recalculate shipping (watch ToDistrictId, ToWardCode, Weight)
 watch(
-  [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode],
+  [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode, () => checkout.value.Weight],
   async () => {
     if (!checkout.value.ToDistrictId || !checkout.value.ToWardCode) return;
-
     try {
       shippingOptions.value = await shippingService.calculateShipping({
         to_district_id: checkout.value.ToDistrictId,
         to_ward_code: checkout.value.ToWardCode,
         weight: checkout.value.Weight
       });
-
+      serviceTypes.value = shippingOptions.value.map(s => ({ service_id: s.service_id, service_type: s.service_type }));
       if (!shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId)) {
         checkout.value.ServiceId = shippingOptions.value[0]?.service_id || null;
       }
-    } catch (e) {
+    } catch(e) {
       shippingOptions.value = [];
+      serviceTypes.value = [];
+      console.error(e);
     }
   }
 );
@@ -290,7 +297,6 @@ async function applyVoucherCode() {
     voucherError.value = "Vui lòng nhập mã giảm giá.";
     return;
   }
-
   voucherError.value = null;
   voucherSuccess.value = null;
   loadingVoucher.value = true;
@@ -300,14 +306,15 @@ async function applyVoucherCode() {
       rentalId,
       code: voucherCode.value.trim()
     });
-
     voucherDiscount.value = result.discount || 0;
-    voucherSuccess.value = result.code;
-
+    voucherSuccess.value = result.code || null;
   } catch (e) {
-    voucherError.value = "Mã không hợp lệ.";
+    voucherError.value = "Mã không hợp lệ hoặc đã hết hạn.";
+    voucherDiscount.value = 0;
+    voucherSuccess.value = null;
+  } finally {
+    loadingVoucher.value = false;
   }
-  loadingVoucher.value = false;
 }
 
 // Submit order
@@ -332,22 +339,17 @@ async function submitOrder() {
     const payload = {
       RentalId: rentalId,
       ShippingAddress: checkout.value.ShippingAddress,
-
       ToProvinceId: checkout.value.ToProvinceId,
       ToProvinceName: provinces.value.find(x => x.ProvinceID === checkout.value.ToProvinceId)?.ProvinceName,
-
       ToDistrictId: checkout.value.ToDistrictId,
       ToDistrictName: districts.value.find(x => x.DistrictID === checkout.value.ToDistrictId)?.DistrictName,
-
       ToWardCode: checkout.value.ToWardCode,
       ToWardName: wards.value.find(x => x.WardCode === checkout.value.ToWardCode)?.WardName,
-
       ServiceId: checkout.value.ServiceId,
       Weight: checkout.value.Weight,
       Length: checkout.value.Length,
       Width: checkout.value.Width,
       Height: checkout.value.Height,
-
       PaymentMethod: checkout.value.PaymentMethod === "QR" ? 1 : 0,
       VoucherCode: voucherCode.value.trim() || null
     };
@@ -368,13 +370,15 @@ async function submitOrder() {
       return;
     }
 
+    // COD / success
     showSuccess.value = true;
 
   } catch (err) {
-    alert("Lỗi khi thanh toán: " + (err.message || ""));
+    console.error("❌ Lỗi khi thanh toán:", err);
+    alert("Lỗi khi thanh toán: " + (err?.message || ""));
+  } finally {
+    loading.value = false;
   }
-
-  loading.value = false;
 }
 
 function goToOrders() {

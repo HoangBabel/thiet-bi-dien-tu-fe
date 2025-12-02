@@ -25,7 +25,6 @@
             class="form-control me-2"
             type="search"
             placeholder="Tìm kiếm sản phẩm..."
-            aria-label="Search"
             @keyup.enter="goSearch"
           />
           <button class="btn btn-outline-light" type="submit">
@@ -95,17 +94,13 @@
             @mouseenter="showDropdown = true"
             @mouseleave="showDropdown = false"
           >
-            <a
-              class="nav-link dropdown-toggle d-flex align-items-center"
-              href="#"
-              id="userDropdown"
-              role="button"
-            >
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#">
+              <!-- Ảnh avatar giống Profile.vue -->
               <img
                 v-if="isLoggedIn"
                 :src="resolvedAvatar"
-                alt="avatar"
                 class="rounded-circle me-2 shadow-sm avatar-navbar"
+                alt="avatar"
               />
 
               <i
@@ -120,27 +115,20 @@
 
             <ul
               class="dropdown-menu dropdown-menu-end shadow"
-              aria-labelledby="userDropdown"
               :class="{ show: showDropdown }"
             >
-              <!-- Not logged in -->
               <template v-if="!isLoggedIn">
                 <li><router-link to="/login" class="dropdown-item">Đăng nhập</router-link></li>
                 <li><router-link to="/register" class="dropdown-item">Đăng ký</router-link></li>
               </template>
 
-              <!-- Logged in -->
               <template v-else>
                 <li>
-                  <router-link to="/profile" class="dropdown-item">
-                    Hồ sơ
-                  </router-link>
+                  <router-link to="/profile" class="dropdown-item">Hồ sơ</router-link>
                 </li>
 
                 <li v-if="String(userRole).toLowerCase() === 'admin'">
-                  <router-link to="/admin" class="dropdown-item">
-                    Quản trị
-                  </router-link>
+                  <router-link to="/admin" class="dropdown-item">Quản trị</router-link>
                 </li>
 
                 <li>
@@ -158,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -173,23 +161,29 @@ onMounted(() => {
   authStore.loadFromStorage();
 });
 
-// Avatar xử lý như Profile.vue
+// 🖼️ Avatar giống 100% logic từ Profile.vue
 const resolvedAvatar = computed(() => {
-  const avatar = authStore.user?.avatarUrl || authStore.user?.avatar;
-  if (!avatar) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-  if (avatar.startsWith("/")) return `https://localhost:44303${avatar}`;
-  return avatar;
+  const raw = authStore.user?.avatarUrl || authStore.user?.avatar;
+
+  if (!raw) {
+    return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  }
+
+  if (!raw.startsWith("http")) {
+    const clean = raw.replace(/^\/+/, "");
+    return `https://localhost:44303/${clean}?v=${Date.now()}`;
+  }
+
+  return `${raw}?v=${Date.now()}`;
 });
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
-const userDisplayName = computed(
-  () => authStore.user?.fullName || authStore.user?.username || "Tài khoản"
+
+const userDisplayName = computed(() =>
+  authStore.user?.fullName || authStore.user?.username || "Tài khoản"
 );
 
-const userRole = computed(() => {
-  const role = authStore.user?.role;
-  return typeof role === "string" ? role : String(role ?? "");
-});
+const userRole = computed(() => authStore.user?.role || "");
 
 function goSearch() {
   if (!search.value.trim()) return;
@@ -205,14 +199,9 @@ function logout() {
 <style scoped>
 .nav-item.dropdown:hover .dropdown-menu {
   display: block;
-  margin-top: 0;
 }
 .dropdown-menu.show {
   display: block;
-}
-.dropdown-item:hover {
-  background-color: #0d6efd;
-  color: white;
 }
 .avatar-navbar {
   width: 32px;
@@ -223,8 +212,5 @@ function logout() {
 .nav-link.active {
   color: #0d6efd !important;
   font-weight: 600;
-}
-body {
-  padding-top: 70px;
 }
 </style>
