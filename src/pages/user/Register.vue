@@ -65,10 +65,11 @@
           <label for="addressInput">Địa chỉ (tuỳ chọn)</label>
         </div>
 
-        <div class="form-floating mb-3">
+        <!-- 🔑 Mật khẩu -->
+        <div class="form-floating mb-3 position-relative">
           <input
+            :type="showPassword ? 'text' : 'password'"
             v-model="password"
-            type="password"
             class="form-control rounded-3"
             id="passwordInput"
             placeholder="Mật khẩu"
@@ -76,18 +77,40 @@
             required
           />
           <label for="passwordInput">Mật khẩu</label>
+          <i
+            class="bi"
+            :class="showPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+            @click="showPassword = !showPassword"
+            style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+          ></i>
         </div>
 
-        <div class="form-floating mb-3">
+        <div class="form-floating mb-2 position-relative">
           <input
+            :type="showConfirmPassword ? 'text' : 'password'"
             v-model="confirmPassword"
-            type="password"
             class="form-control rounded-3"
             id="confirmInput"
             placeholder="Xác nhận mật khẩu"
             required
           />
           <label for="confirmInput">Xác nhận mật khẩu</label>
+          <i
+            class="bi"
+            :class="showConfirmPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+            @click="showConfirmPassword = !showConfirmPassword"
+            style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+          ></i>
+        </div>
+
+        <!-- 🔗 Quên mật khẩu -->
+        <div class="text-end mb-3">
+          <router-link
+            to="/reset-password"
+            class="small text-decoration-none text-warning"
+          >
+            Quên mật khẩu?
+          </router-link>
         </div>
 
         <button
@@ -128,6 +151,8 @@ const phoneNumber = ref("");
 const address = ref("");
 const password = ref("");
 const confirmPassword = ref("");
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
 const loading = ref(false);
 const error = ref("");
 
@@ -137,7 +162,6 @@ const authStore = useAuthStore();
 async function handleRegister() {
   error.value = "";
 
-  // ⚠️ Kiểm tra đơn giản
   if (!username.value || !fullName.value || !email.value || !password.value) {
     error.value = "Vui lòng điền đầy đủ thông tin bắt buộc.";
     return;
@@ -154,7 +178,6 @@ async function handleRegister() {
   loading.value = true;
 
   try {
-    // 🟢 Gọi API đăng ký
     await authStore.register({
       username: username.value,
       fullName: fullName.value,
@@ -164,7 +187,6 @@ async function handleRegister() {
       address: address.value || null,
     });
 
-    // 🟢 Tự động đăng nhập sau khi đăng ký
     await authStore.login(email.value, password.value);
 
     alert(`Đăng ký thành công! Chào mừng ${fullName.value || username.value}`);

@@ -6,9 +6,7 @@
         <p class="text-muted small mb-0">Chào mừng bạn quay lại!</p>
       </div>
 
-      <!-- ======================== -->
       <!-- 🔐 FORM ĐĂNG NHẬP -->
-      <!-- ======================== -->
       <form @submit.prevent="handleLogin">
         <div class="form-floating mb-3">
           <input
@@ -22,9 +20,9 @@
           <label for="emailInput">Email</label>
         </div>
 
-        <div class="form-floating mb-3">
+        <div class="form-floating mb-3 position-relative">
           <input
-            type="password"
+            :type="showPassword ? 'text' : 'password'"
             v-model="password"
             class="form-control rounded-3"
             id="passwordInput"
@@ -32,6 +30,22 @@
             required
           />
           <label for="passwordInput">Mật khẩu</label>
+          <i
+            class="bi"
+            :class="showPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+            @click="showPassword = !showPassword"
+            style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+          ></i>
+        </div>
+
+        <!-- 🔗 Quên mật khẩu -->
+        <div class="text-end mb-3">
+          <router-link
+            to="/reset-password"
+            class="small text-decoration-none text-warning"
+          >
+            Quên mật khẩu?
+          </router-link>
         </div>
 
         <button
@@ -48,16 +62,12 @@
         </button>
       </form>
 
-      <!-- ======================== -->
       <!-- ⚠️ THÔNG BÁO LỖI -->
-      <!-- ======================== -->
       <div v-if="error" class="alert alert-danger mt-3 py-2 text-center small">
         {{ error }}
       </div>
 
-      <!-- ======================== -->
       <!-- 🔗 CHUYỂN TRANG -->
-      <!-- ======================== -->
       <p class="text-center mt-4 mb-0 text-muted small">
         Chưa có tài khoản?
         <router-link to="/register" class="fw-semibold text-decoration-none">
@@ -66,9 +76,7 @@
       </p>
     </div>
 
-    <!-- ======================== -->
     <!-- 🔢 MODAL XÁC NHẬN 2FA -->
-    <!-- ======================== -->
     <Confirm2FAModal
       v-if="show2FAModal"
       :email="pendingEmail"
@@ -88,6 +96,7 @@ import userService from "@/services/userService.js";
 
 const email = ref("");
 const password = ref("");
+const showPassword = ref(false);
 const error = ref("");
 const loading = ref(false);
 
@@ -98,25 +107,19 @@ const pendingEmail = ref("");
 const router = useRouter();
 const authStore = useAuthStore();
 
-/* =====================================================
-   🟢 BƯỚC 1: ĐĂNG NHẬP (EMAIL + PASSWORD)
-===================================================== */
 async function handleLogin() {
   error.value = "";
   loading.value = true;
 
   try {
-    // Gửi yêu cầu đăng nhập
     const res = await authStore.login(email.value, password.value);
 
-    // Nếu backend yêu cầu 2FA, lưu lại email và bật modal xác minh
     if (authStore.is2FARequired) {
       pendingEmail.value = authStore.pendingEmail;
       show2FAModal.value = true;
       return;
     }
 
-    // Nếu không yêu cầu 2FA, đăng nhập thành công
     await handleRedirect();
   } catch (err) {
     console.error("❌ Lỗi đăng nhập:", err);
@@ -129,9 +132,6 @@ async function handleLogin() {
   }
 }
 
-/* =====================================================
-   🔑 BƯỚC 2: XÁC MINH MÃ OTP (2FA)
-===================================================== */
 async function handleVerify2FA(code) {
   verifying.value = true;
   error.value = "";
@@ -154,23 +154,16 @@ async function handleVerify2FA(code) {
   }
 }
 
-/* =====================================================
-   ❌ ĐÓNG MODAL 2FA
-===================================================== */
 function close2FAModal() {
   show2FAModal.value = false;
   pendingEmail.value = "";
 }
 
-/* =====================================================
-   🚀 ĐIỀU HƯỚNG SAU ĐĂNG NHẬP
-===================================================== */
 async function handleRedirect() {
   try {
     const userId = authStore.user?.id;
     if (!userId) throw new Error("Không thể xác định người dùng.");
 
-    // Lấy trạng thái 2FA mới nhất để đồng bộ
     const statusRes = await userService.get2FAStatus(userId);
     authStore.user.is2FAEnabled = statusRes?.data?.is2FAEnabled ?? false;
 

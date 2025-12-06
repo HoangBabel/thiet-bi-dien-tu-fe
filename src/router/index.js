@@ -20,6 +20,7 @@ import AdminUser from "@/pages/admin/AdminUser.vue";
 import Home from "@/pages/user/Home.vue";
 import Login from "@/pages/user/Login.vue";
 import Register from "@/pages/user/Register.vue";
+import ResetPassword from "@/pages/user/ResetPassword.vue";
 import ProductsPage from "@/pages/user/Products.vue";
 import ProductDetail from "@/pages/user/ProductDetail.vue";
 import Cart from "@/pages/user/Cart.vue";
@@ -48,8 +49,9 @@ const routes = [
       { path: "", component: Home },
       { path: "login", component: Login },
       { path: "register", component: Register },
+      { path: "reset-password", component: ResetPassword },
       { path: "products", component: ProductsPage },
-      { path: "products/:id", component: ProductDetail, props: true },
+      { path: "products/:id", component: ProductDetail, props: false },
       { path: "cart", component: Cart },
       { path: "checkout", component: Checkout, meta: { requiresAuth: true } },
       { path: "rentalCheckout", name: "RentalCheckout", component: RentalCheckout, meta: { requiresAuth: true }, props: true},

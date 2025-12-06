@@ -37,6 +37,9 @@
               <p class="small text-muted mb-0">
                 Kết thúc: {{ formatDate(rental.endDate) }}
               </p>
+              <p class="small text-muted mb-0">
+                Phương thức: <span class="fw-medium">{{ rental.paymentMethod }}</span>
+              </p>
               <p v-if="rental.transactionCode" class="small text-muted mb-0">
                 Mã giao dịch: {{ rental.transactionCode }}
               </p>
@@ -136,7 +139,7 @@ let intervalId = null;
     FILTERED RENTALS (Không hiển thị Pending)
 ============================= */
 const rentalsFiltered = computed(() =>
-  rentals.value.filter(r => r.status !== "Pending")
+  rentals.value.filter(r => r.status !== "Unpaid")
 );
 
 /* =============================

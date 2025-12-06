@@ -34,7 +34,7 @@
                 </div>
               </div>
 
-              <!-- Thông tin -->
+              <!-- Thông tin cơ bản -->
               <div class="form-floating mb-3">
                 <input
                   v-model.trim="form.fullName"
@@ -70,7 +70,6 @@
                 <label for="phoneInput">Số điện thoại</label>
               </div>
 
-              <!-- 🏠 Địa chỉ -->
               <div class="form-floating mb-3">
                 <input
                   v-model.trim="form.address"
@@ -84,32 +83,78 @@
 
               <hr />
 
-              <!-- Mật khẩu -->
-              <div class="form-floating mb-3">
-                <input
-                  v-model="form.password"
-                  type="password"
-                  class="form-control"
-                  id="passwordInput"
-                  placeholder="Mật khẩu mới"
-                />
-                <label for="passwordInput">Mật khẩu mới (tuỳ chọn)</label>
+              <!-- 🔐 Đổi mật khẩu -->
+              <div class="mb-3">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  @click="showPasswordForm = !showPasswordForm"
+                >
+                  <i class="bi bi-key me-1"></i>Đổi mật khẩu
+                </button>
               </div>
 
-              <div class="form-floating mb-3">
-                <input
-                  v-model="form.confirmPassword"
-                  type="password"
-                  class="form-control"
-                  id="confirmInput"
-                  placeholder="Xác nhận mật khẩu"
-                />
-                <label for="confirmInput">Xác nhận mật khẩu</label>
+              <div v-if="showPasswordForm">
+                <!-- Mật khẩu hiện tại -->
+                <div class="form-floating mb-3 position-relative">
+                  <input
+                    :type="showCurrentPassword ? 'text' : 'password'"
+                    v-model="form.currentPassword"
+                    class="form-control"
+                    id="currentPasswordInput"
+                    placeholder="Mật khẩu hiện tại"
+                    required
+                  />
+                  <label for="currentPasswordInput">Mật khẩu hiện tại</label>
+                  <i
+                    class="bi"
+                    :class="showCurrentPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+                    @click="showCurrentPassword = !showCurrentPassword"
+                    style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+                  ></i>
+                </div>
+
+                <!-- Mật khẩu mới -->
+                <div class="form-floating mb-3 position-relative">
+                  <input
+                    :type="showNewPassword ? 'text' : 'password'"
+                    v-model="form.password"
+                    class="form-control"
+                    id="passwordInput"
+                    placeholder="Mật khẩu mới"
+                    required
+                  />
+                  <label for="passwordInput">Mật khẩu mới</label>
+                  <i
+                    class="bi"
+                    :class="showNewPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+                    @click="showNewPassword = !showNewPassword"
+                    style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+                  ></i>
+                </div>
+
+                <!-- Xác nhận mật khẩu -->
+                <div class="form-floating mb-3 position-relative">
+                  <input
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    v-model="form.confirmPassword"
+                    class="form-control"
+                    id="confirmInput"
+                    placeholder="Xác nhận mật khẩu"
+                    required
+                  />
+                  <label for="confirmInput">Xác nhận mật khẩu</label>
+                  <i
+                    class="bi"
+                    :class="showConfirmPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+                  ></i>
+                </div>
+                <hr />
               </div>
 
-              <hr />
-
-              <!-- 🧩 2FA -->
+              <!-- 2FA -->
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                   <h6 class="mb-1 fw-semibold">Xác thực hai yếu tố (2FA)</h6>
@@ -188,61 +233,70 @@
       </div>
     </div>
 
-    <!-- 🔐 Modal nhập mật khẩu khi bật/tắt 2FA -->
+    <!-- Modal nhập mật khẩu khi bật/tắt 2FA -->
     <div
-      class="modal fade"
-      id="passwordModal"
-      tabindex="-1"
-      aria-hidden="true"
-      ref="passwordModalEl"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow">
-          <div class="modal-header">
-            <h5 class="modal-title fw-semibold">
-              {{ isEnabling2FA ? "Bật xác thực hai yếu tố" : "Tắt xác thực hai yếu tố" }}
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <p class="small text-muted">
-              Vui lòng nhập mật khẩu tài khoản để xác nhận hành động này.
-            </p>
+    class="modal fade"
+    id="passwordModal"
+    tabindex="-1"
+    aria-hidden="true"
+    ref="passwordModalEl">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-3 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-semibold">
+            {{ isEnabling2FA ? "Bật xác thực hai yếu tố" : "Tắt xác thực hai yếu tố" }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">
+            Vui lòng nhập mật khẩu tài khoản để xác nhận hành động này.
+          </p>
+
+          <div class="position-relative">
             <input
+              :type="showPassword2FA ? 'text' : 'password'"
               v-model="passwordConfirm"
-              type="password"
               class="form-control"
               placeholder="Nhập mật khẩu của bạn"
               @keyup.enter="confirmToggle2FA"
             />
+            <i
+              class="bi"
+              :class="showPassword2FA ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+              @click="showPassword2FA = !showPassword2FA"
+              style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+            ></i>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-              :disabled="loading2FA"
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              @click="confirmToggle2FA"
-              :disabled="loading2FA || !passwordConfirm"
-            >
-              <span v-if="loading2FA" class="spinner-border spinner-border-sm me-2"></span>
-              Xác nhận
-            </button>
-          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+            :disabled="loading2FA"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="confirmToggle2FA"
+            :disabled="loading2FA || !passwordConfirm"
+          >
+            <span v-if="loading2FA" class="spinner-border spinner-border-sm me-2"></span>
+            Xác nhận
+          </button>
         </div>
       </div>
     </div>
+    </div>
+
   </div>
 </template>
 
@@ -260,13 +314,23 @@ const user = computed(() => authStore.user || {});
 const loading = ref(false);
 const message = ref("");
 const messageType = ref("success");
+// Hiển thị mật khẩu cho modal 2FA
+const showPassword2FA = ref(false);
 
 const loading2FA = ref(false);
 const twoFAStatus = ref("");
 const twoFAStatusType = ref("success");
 const twoFAEnabled = ref(false);
 
-// --- Form dữ liệu ---
+// Hiển thị form đổi mật khẩu
+const showPasswordForm = ref(false);
+
+// Hiển thị mật khẩu
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+
+// Form dữ liệu
 const form = ref({
   fullName: "",
   email: "",
@@ -274,9 +338,10 @@ const form = ref({
   address: "",
   password: "",
   confirmPassword: "",
+  currentPassword: "",
 });
 
-// --- Avatar ---
+// Avatar
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 const previewAvatar = ref(defaultAvatar);
 let newAvatarFile = null;
@@ -298,14 +363,12 @@ onMounted(async () => {
   }
 });
 
-// ✅ Theo dõi user cập nhật
 watch(user, (newUser) => {
   if (newUser?.avatar) previewAvatar.value = newUser.avatar;
   if (newUser?.isTwoFactorEnabled !== undefined)
     twoFAEnabled.value = newUser.isTwoFactorEnabled;
 });
 
-// ✅ Upload avatar
 function handleAvatarUpload(e) {
   const file = e.target.files[0];
   if (file) {
@@ -314,14 +377,20 @@ function handleAvatarUpload(e) {
   }
 }
 
-// ✅ Cập nhật hồ sơ
 async function handleUpdate() {
   message.value = "";
 
-  if (form.value.password && form.value.password !== form.value.confirmPassword) {
-    message.value = "Mật khẩu xác nhận không khớp.";
-    messageType.value = "danger";
-    return;
+  if (showPasswordForm.value) {
+    if (!form.value.currentPassword) {
+      message.value = "Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.";
+      messageType.value = "danger";
+      return;
+    }
+    if (!form.value.password || form.value.password !== form.value.confirmPassword) {
+      message.value = "Mật khẩu mới và xác nhận không khớp.";
+      messageType.value = "danger";
+      return;
+    }
   }
 
   try {
@@ -335,13 +404,23 @@ async function handleUpdate() {
       phoneNumber: form.value.phoneNumber,
       address: form.value.address,
     };
-    if (form.value.password) payload.password = form.value.password;
+
+    if (showPasswordForm.value) {
+      payload.currentPassword = form.value.currentPassword;
+      payload.password = form.value.password;
+    }
 
     await userService.update(user.value.id, payload);
     await authStore.fetchCurrentUser();
 
     message.value = "Cập nhật hồ sơ thành công!";
     messageType.value = "success";
+
+    form.value.password = "";
+    form.value.confirmPassword = "";
+    form.value.currentPassword = "";
+    showPasswordForm.value = false;
+
     setTimeout(() => router.push("/profile"), 1500);
   } catch (err) {
     console.error("❌ Lỗi cập nhật:", err);
@@ -394,6 +473,7 @@ async function confirmToggle2FA() {
   }
 }
 </script>
+
 
 <style scoped>
 .card {

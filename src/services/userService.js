@@ -2,7 +2,7 @@ import api, { USER_API } from "./api";
 
 const userService = {
   /* ===========================
-     👤 NGƯỜI DÙNG
+        👤 NGƯỜI DÙNG
   ============================ */
 
   // 📋 Lấy toàn bộ user (Admin)
@@ -15,7 +15,7 @@ const userService = {
     return api.get(USER_API.GET_BY_ID(id));
   },
 
-  // 👤 Lấy thông tin user hiện tại (từ token)
+  // 👤 Lấy thông tin user hiện tại
   getCurrentUser() {
     return api.get(USER_API.CURRENT_USER);
   },
@@ -29,6 +29,7 @@ const userService = {
   uploadAvatar(id, file) {
     const formData = new FormData();
     formData.append("avatar", file);
+
     return api.post(USER_API.UPLOAD_AVATAR(id), formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -36,12 +37,11 @@ const userService = {
 
   // ❌ Xóa user
   delete(id) {
-    // Backend route: DELETE /api/user/{id}
     return api.delete(USER_API.DELETE(id));
   },
 
   /* ===========================
-     🔐 XÁC THỰC (AUTH)
+       🔐 AUTHENTICATION
   ============================ */
 
   // 🧾 Đăng ký
@@ -49,7 +49,7 @@ const userService = {
     return api.post(USER_API.REGISTER, data);
   },
 
-  // 🔑 Đăng nhập (có thể yêu cầu 2FA)
+  // 🔑 Đăng nhập
   login(credentials) {
     return api.post(USER_API.LOGIN, credentials);
   },
@@ -64,14 +64,50 @@ const userService = {
     return api.post(USER_API.RESEND_2FA, { email });
   },
 
-  // ⚙️ Bật / tắt 2FA (cần mật khẩu xác minh)
+  // ⚙️ Bật / tắt 2FA
   toggle2FA(password) {
     return api.post(USER_API.TOGGLE_2FA, { password });
   },
 
-  // 📊 Kiểm tra trạng thái 2FA hiện tại của người dùng
+  // 📊 Kiểm tra trạng thái 2FA
   get2FAStatus() {
     return api.get(USER_API.GET_2FA_STATUS);
+  },
+
+  /* ===========================
+      🔄 RESET PASSWORD
+  ============================ */
+
+  // 📧 Gửi mã reset password
+  sendResetCode(email) {
+    return api.post(USER_API.SEND_RESET_CODE, { email });
+  },
+
+  // 🔁 Gửi lại mã reset
+  resendResetCode(email) {
+    return api.post(USER_API.RESEND_RESET_CODE, { email });
+  },
+
+  // 🔒 Reset password
+resetPassword(email, code, newPassword, confirmPassword) {
+  return api.post(USER_API.RESET_PASSWORD, {
+    email,
+    code,
+    newPassword,
+    confirmPassword,
+  });
+},
+
+  /* ===========================
+        🔑 CHANGE PASSWORD
+  ============================ */
+
+  // 🛡 Đổi mật khẩu
+  changePassword(currentPassword, newPassword) {
+    return api.post(USER_API.CHANGE_PASSWORD, {
+      currentPassword,
+      newPassword,
+    });
   },
 };
 

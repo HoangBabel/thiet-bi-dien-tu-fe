@@ -78,13 +78,6 @@
             </p>
 
             <!-- COD -->
-            <button
-              v-if="order.paymentMethod === 'COD' && order.paymentStatus !== 'PAID'"
-              class="btn btn-success btn-sm"
-              @click="markAsPaid(order.id)"
-            >
-              <i class="bi bi-check2-circle me-1"></i> Xác nhận hoàn tất
-            </button>
 
             <!-- PayOS chưa thanh toán -->
             <a

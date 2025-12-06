@@ -5,10 +5,10 @@ const API_URL = "https://localhost:44303/api/RentalCheckout"; // đổi theo bac
 // Lấy JWT token từ localStorage
 function authHeader() {
   const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export default {
+const rentalCheckoutService = {
   /**
    * Checkout một rental
    * @param {object} checkoutDto - CheckoutRentalRequest (body JSON)
@@ -16,6 +16,10 @@ export default {
    * @returns {Promise<object>} thông tin checkout, bao gồm CheckoutUrl, FinalAmount, PaymentMethod, v.v.
    */
   async checkoutRental(checkoutDto, devUserId = null) {
+    if (!checkoutDto || typeof checkoutDto !== "object") {
+      throw new Error("checkoutDto không hợp lệ.");
+    }
+
     try {
       const config = { headers: authHeader() };
 
@@ -23,13 +27,33 @@ export default {
       const query = devUserId ? `?devUserId=${devUserId}` : "";
 
       const res = await axios.post(`${API_URL}${query}`, checkoutDto, config);
-      return res.data;
+
+      // Trả về toàn bộ dữ liệu backend trả về
+      return {
+        rentalId: res.data.RentalId ?? res.data.rentalId,
+        message: res.data.Message ?? res.data.message,
+        subtotal: res.data.Subtotal ?? 0,
+        shippingFee: res.data.ShippingFee ?? 0,
+        deposit: res.data.Deposit ?? 0,
+        discount: res.data.Discount ?? 0,
+        finalAmount: res.data.FinalAmount ?? 0,
+        voucherCode: res.data.VoucherCode ?? null,
+        serviceType: res.data.ServiceType ?? null,
+        weight: res.data.Weight ?? null,
+        nextStep: res.data.nextStep ?? null,
+        paymentInstruction: res.data.paymentInstruction ?? null,
+        checkoutUrl: res.data.CheckoutUrl ?? null,
+        qrCode: res.data.QrCode ?? null,
+        paymentLinkId: res.data.PaymentLinkId ?? null
+      };
     } catch (err) {
       // Bắt lỗi từ backend
       if (err.response) {
-        throw new Error(err.response.data?.error || JSON.stringify(err.response.data));
+        throw new Error(err.response.data?.error || err.response.data?.message || JSON.stringify(err.response.data));
       }
       throw err;
     }
   }
 };
+
+export default rentalCheckoutService;

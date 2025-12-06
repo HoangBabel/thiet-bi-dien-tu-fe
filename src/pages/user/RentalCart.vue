@@ -176,12 +176,13 @@ async function loadRentals() {
   loading.value = true
   try {
     const data = await rentalService.getMyRentals()
-    // Giỏ: chỉ Pending
-    rentals.value = (data || []).filter(r => r.status === "Pending")
+    // Chỉ hiện đơn thuê chưa thanh toán
+    rentals.value = (data || []).filter(r => r.paymentStatus === "UNPAID")
   } finally {
     loading.value = false
   }
 }
+
 
 /* ============= OPEN / CLOSE MODAL ============= */
 function openEditRentalModal(rental) {

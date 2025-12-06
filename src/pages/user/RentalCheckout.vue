@@ -12,7 +12,6 @@
 
           <div class="card-body">
             <form @submit.prevent="submitOrder">
-              
               <!-- Địa chỉ -->
               <div class="mb-3">
                 <label class="form-label">Địa chỉ</label>
@@ -73,9 +72,7 @@
                     Áp dụng
                   </button>
                 </div>
-
                 <div v-if="voucherError" class="text-danger small mt-2">{{ voucherError }}</div>
-
                 <div v-if="voucherSuccess" class="text-success small mt-2">
                   ✅ Giảm {{ formatCurrency(voucherDiscount) }} với mã "{{ voucherSuccess }}"
                 </div>
@@ -96,7 +93,6 @@
                 </span>
                 <span v-else>💳 Xác nhận thanh toán</span>
               </button>
-
             </form>
           </div>
         </div>
@@ -108,7 +104,6 @@
           <div class="card-header text-white bg-gradient-secondary fw-semibold">Tóm tắt đơn hàng</div>
 
           <ul class="list-group list-group-flush">
-
             <li v-for="item in rentalItems" :key="item.id"
                 class="list-group-item d-flex justify-content-between align-items-center">
               <div>
@@ -132,7 +127,6 @@
               <strong>{{ formatCurrency(selectedShippingFee) }}</strong>
             </li>
 
-            <!-- Voucher display -->
             <li v-if="voucherDiscount > 0"
                 class="list-group-item d-flex justify-content-between text-success">
               <span>Giảm giá:</span>
@@ -143,7 +137,6 @@
               <span>Tổng cộng:</span>
               <span class="text-success">{{ formatCurrency(finalTotalWithDeposit) }}</span>
             </li>
-
           </ul>
         </div>
       </div>
@@ -171,15 +164,15 @@ import rentalService from "@/services/RentalService";
 import rentalCheckoutService from "@/services/rentalCheckoutService";
 import locationService from "@/services/locationService";
 import shippingService from "@/services/shippingService";
-import payosService from "@/services/payosService";
 import { useAuthStore } from "@/stores/auth";
+
+import payosService from "@/services/payosService";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
 const rentalId = Number(route.query.rentalId || 0);
-
 const rentalData = ref(null);
 const rentalItems = ref([]);
 
@@ -213,31 +206,28 @@ const loadingVoucher = ref(false);
 const loading = ref(false);
 const showSuccess = ref(false);
 
-// Shipping fee
+// Computed values
 const selectedShippingFee = computed(() => {
   const opt = shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId);
   return opt ? opt.shipping_fee : 0;
 });
 
-// Total
 const finalTotalWithDeposit = computed(() => {
   const itemsTotal = rentalItems.value.reduce((s, i) => s + i.subTotal, 0);
   const deposit = rentalData.value?.depositPaid || 0;
   return itemsTotal + selectedShippingFee.value - voucherDiscount.value + deposit;
 });
 
-// Currency
 function formatCurrency(v) {
   return v?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫";
 }
 
-// Shipping fee helper
 function getShippingFeeById(id) {
   const opt = shippingOptions.value.find(s => s.service_id === id);
   return opt ? opt.shipping_fee : 0;
 }
 
-// Load rental
+// Load rental data
 async function loadRentalData() {
   try {
     const data = await rentalService.getRentalById(rentalId);
@@ -268,7 +258,7 @@ function onDistrictChange() {
   loadWards(checkout.value.ToDistrictId);
 }
 
-// Recalculate shipping (watch ToDistrictId, ToWardCode, Weight)
+// Recalculate shipping
 watch(
   [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode, () => checkout.value.Weight],
   async () => {
@@ -291,7 +281,7 @@ watch(
   }
 );
 
-// Apply voucher
+// Voucher
 async function applyVoucherCode() {
   if (!voucherCode.value.trim()) {
     voucherError.value = "Vui lòng nhập mã giảm giá.";
@@ -325,10 +315,7 @@ async function submitOrder() {
     return;
   }
 
-  if (!checkout.value.ShippingAddress ||
-      !checkout.value.ToProvinceId ||
-      !checkout.value.ToDistrictId ||
-      !checkout.value.ToWardCode) {
+  if (!checkout.value.ShippingAddress || !checkout.value.ToProvinceId || !checkout.value.ToDistrictId || !checkout.value.ToWardCode) {
     alert("Vui lòng chọn đầy đủ địa chỉ giao hàng.");
     return;
   }
@@ -359,9 +346,34 @@ async function submitOrder() {
     if (result.voucherCode) voucherSuccess.value = result.voucherCode;
     voucherDiscount.value = result.discount || 0;
 
-    // QR Payment
     if (checkout.value.PaymentMethod === "QR") {
-      const payResult = await payosService.getRentalPaymentLink(result.rentalId);
+      let payResult;
+      try {
+        payResult = await payosService.createRentalPaymentLink(result.rentalId);
+      } catch (err) {
+        const data = err.response?.data;
+        if (data?.message?.includes("Đã tồn tại link thanh toán")) {
+          payResult = {
+            message: data.message,
+            rentalId: result.rentalId,
+            paymentUrl: data.paymentUrl || "",
+            qrCodeUrl: data.qrCodeUrl || "",
+            paymentLinkId: data.paymentLinkId || "",
+            status: data.status || "PENDING"
+          };
+        } else {
+          console.error("❌ Lỗi tạo PayOS link:", err);
+          alert("Lỗi khi tạo PayOS link: " + (data?.message || err.message));
+          return;
+        }
+      }
+
+      const stopPolling = payosService.pollRentalPaymentStatus(result.rentalId, (status) => {
+        if (status.paymentStatus === "PAID") {
+          stopPolling();
+          showSuccess.value = true;
+        }
+      }, 5000, 60);
 
       router.push({
         path: "/rental-payment-result",
@@ -370,12 +382,12 @@ async function submitOrder() {
       return;
     }
 
-    // COD / success
     showSuccess.value = true;
 
   } catch (err) {
     console.error("❌ Lỗi khi thanh toán:", err);
-    alert("Lỗi khi thanh toán: " + (err?.message || ""));
+    const msg = err.response?.data?.message || err.response?.data?.error || err.message || "";
+    alert("Lỗi khi thanh toán: " + msg);
   } finally {
     loading.value = false;
   }

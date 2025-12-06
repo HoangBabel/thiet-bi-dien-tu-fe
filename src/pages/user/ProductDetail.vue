@@ -124,6 +124,79 @@
       </div>
     </div>
 
+<!-- Reviews -->
+<div class="mt-5" v-if="reviews">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-semibold text-primary">
+      ⭐ Đánh giá & Nhận xét ({{ reviews.total }})
+    </h4>
+
+    <button
+      class="btn btn-outline-primary"
+      @click="openReviewModal"
+      v-if="isLoggedIn"
+    >
+      <i class="bi bi-pencil-square me-1"></i> Viết đánh giá
+    </button>
+    <button
+      class="btn btn-outline-danger"
+      disabled
+      v-else
+    >
+      🔒 Đăng nhập để đánh giá
+    </button>
+  </div>
+
+  <!-- Thống kê -->
+  <div class="mb-3" v-if="reviews.averageRating">
+    <span class="fw-bold fs-5 text-warning">
+      {{ reviews.averageRating.toFixed(1) }} / 5 ⭐
+    </span>
+    <p class="text-muted small mb-0">
+      Dựa trên {{ reviews.total }} lượt đánh giá
+    </p>
+  </div>
+
+  <!-- Danh sách review -->
+  <div v-if="reviews.data.length > 0">
+    <div
+      v-for="rv in reviews.data"
+      :key="rv.id"
+      class="p-3 border rounded mb-3 bg-white shadow-sm"
+    >
+      <div class="d-flex align-items-center mb-1">
+        <strong class="me-2">{{ rv.userName || "Người dùng" }}</strong>
+
+        <span v-for="i in 5" :key="i">
+          <i class="bi"
+             :class="i <= rv.rating ? 'bi-star-fill text-warning' : 'bi-star text-muted'"></i>
+        </span>
+
+        <span class="text-muted small ms-2">
+          {{ new Date(rv.createdAt).toLocaleDateString("vi-VN") }}
+        </span>
+      </div>
+
+      <p class="mb-1">{{ rv.comment }}</p>
+
+      <!-- Ảnh đính kèm -->
+      <div v-if="rv.imageUrls?.length"
+           class="d-flex gap-2 flex-wrap mt-2">
+        <img v-for="(img, idx) in rv.imageUrls"
+             :key="idx"
+             :src="img"
+             @click="openZoom(img)"
+             class="rounded border"
+             style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;">
+      </div>
+    </div>
+  </div>
+
+  <p v-else class="text-muted fst-italic">
+    Hiện chưa có đánh giá cho sản phẩm này. Hãy là người đầu tiên!
+  </p>
+</div>
+
     <!-- Sản phẩm tương tự -->
     <div class="mt-5">
       <h4 class="fw-semibold mb-3 text-primary">🔁 Sản phẩm tương tự</h4>
@@ -193,6 +266,40 @@
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-2">Đang tải sản phẩm...</p>
   </div>
+
+  <!-- Modal tạo review -->
+<div v-if="showReviewModal" class="modal-backdrop-custom">
+  <div class="modal-content-custom bg-white p-4 rounded shadow-lg">
+    <h5 class="fw-bold text-primary mb-3">Viết đánh giá</h5>
+
+    <!-- Rating -->
+    <div class="mb-3">
+      <label class="form-label fw-semibold small">Đánh giá *</label><br>
+      <span v-for="i in 5" :key="i"
+            @click="newReview.rating = i"
+            style="cursor: pointer;">
+        <i class="bi"
+           :class="i <= newReview.rating ? 'bi-star-fill text-warning fs-4' : 'bi-star fs-4 text-muted'"></i>
+      </span>
+    </div>
+
+    <!-- Comment -->
+    <textarea
+      v-model="newReview.comment"
+      class="form-control mb-3"
+      rows="3"
+      placeholder="Chia sẻ cảm nhận của bạn..."
+    ></textarea>
+
+    <div class="text-end">
+      <button class="btn btn-secondary me-2" @click="closeReviewModal">Hủy</button>
+      <button class="btn btn-primary" @click="submitReview">
+        <i class="bi bi-check-circle me-1"></i> Gửi đánh giá
+      </button>
+    </div>
+  </div>
+</div>
+
 </template>
 
 <script setup>
@@ -202,6 +309,7 @@ import api from "@/services/api";
 import cartApi from "@/services/cartService";
 import rentalService from "@/services/rentalService";
 import defaultImage from "@/assets/no-image.png";
+import reviewService from "@/services/reviewService";
 
 const backendUrl = "https://localhost:44303";
 const route = useRoute();
@@ -219,8 +327,24 @@ const adding = ref({});
 const creating = ref({});
 const categories = ref([]);
 
-function showAlert(message, type = "success") {
-  alertMessage.value = message;
+const reviews = ref({
+  success: false,
+  data: [],
+  total: 0,
+  averageRating: 0,
+});
+const showReviewModal = ref(false);
+
+const newReview = ref({
+  rating: 0,
+  comment: "",
+  imageUrls: [],
+});
+
+const isLoggedIn = !!localStorage.getItem("token");
+
+function showAlert(msg, type = "success") {
+  alertMessage.value = msg;
   alertType.value = type;
   setTimeout(() => (alertMessage.value = ""), 3000);
 }
@@ -249,124 +373,185 @@ function openZoom(url) {
   zoomImage.value = url;
 }
 
-// Thêm vào giỏ hàng cho sản phẩm chi tiết
-async function addToCart() {
-  if (!localStorage.getItem("token")) {
-    showAlert("Vui lòng đăng nhập để thêm sản phẩm!", "danger");
+function openReviewModal() {
+  if (!isLoggedIn) {
     router.push("/login");
     return;
   }
+  showReviewModal.value = true;
+}
+
+function closeReviewModal() {
+  showReviewModal.value = false;
+  newReview.value = { rating: 0, comment: "", imageUrls: [] };
+}
+
+function normalizeReviewsPayload(payload) {
+  if (!payload)
+    return { success: false, data: [], total: 0, averageRating: 0 };
+
+  const mapped = (payload.data || []).map((r) => {
+    const imgs = Array.isArray(r.imageUrls)
+      ? r.imageUrls
+      : r.imageUrls
+      ? String(r.imageUrls).split(",")
+      : [];
+
+    return {
+      ...r,
+      imageUrls: imgs.map((img) => getImageUrl(img)),
+    };
+  });
+
+  return {
+    success: payload.success ?? true,
+    data: mapped,
+    total: payload.total ?? mapped.length,
+    averageRating:
+      payload.averageRating ??
+      (mapped.length
+        ? mapped.reduce((s, v) => s + v.rating, 0) / mapped.length
+        : 0),
+  };
+}
+
+async function loadReviews() {
   try {
-    await cartApi.addItem(product.value.idProduct, 1);
-    showAlert("✅ Đã thêm sản phẩm vào giỏ!", "success");
+    if (!product.value) return;
+    const res = await reviewService.getProductReviews(product.value.idProduct);
+    reviews.value = normalizeReviewsPayload(res);
   } catch (err) {
-    console.error(err);
-    showAlert("❌ Không thể thêm sản phẩm!", "danger");
+    console.error("Load reviews failed:", err);
   }
 }
 
-// Tạo đơn thuê cho sản phẩm chi tiết
-async function createRental() {
-  if (!localStorage.getItem("token")) {
-    showAlert("Vui lòng đăng nhập để tạo đơn thuê!", "danger");
-    router.push("/login");
+async function submitReview() {
+  if (!product.value) {
+    showAlert("Sản phẩm chưa sẵn sàng!", "danger");
     return;
   }
-  creating.value[product.value.idProduct] = true;
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(startDate.getDate() + 7);
-  const payload = {
+
+  const rating = Number(newReview.value.rating);
+  const comment = newReview.value.comment?.trim();
+
+  if (rating < 1 || rating > 5) {
+    showAlert("Chọn số sao từ 1 đến 5!", "danger");
+    return;
+  }
+  if (!comment || comment.length < 10) {
+    showAlert("Nội dung phải từ 10 ký tự!", "danger");
+    return;
+  }
+
+  const dto = {
     productId: product.value.idProduct,
-    quantity: 1,
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString()
+    rating,
+    comment,
+    imageUrls: newReview.value.imageUrls || [],
   };
+
   try {
-    const res = await rentalService.createRental(payload);
-    showAlert(`✅ Tạo đơn thuê thành công! Mã đơn: ${res.rentalId}`, "success");
+    const res = await reviewService.createReview(dto);
+    const created = res?.data ?? res;
+    const imgs = Array.isArray(created.imageUrls)
+      ? created.imageUrls
+      : created.imageUrls
+      ? String(created.imageUrls).split(",")
+      : [];
+
+    const newItem = {
+      ...created,
+      imageUrls: imgs.map((i) => getImageUrl(i)),
+    };
+
+    reviews.value.data.unshift(newItem);
+    reviews.value.total++;
+    reviews.value.averageRating =
+      (reviews.value.averageRating * (reviews.value.total - 1) + rating) /
+      reviews.value.total;
+
+    showAlert("Đánh giá thành công!");
+    closeReviewModal();
   } catch (err) {
-    console.error(err);
-    showAlert(err.response?.data || err.message || "❌ Không thể tạo đơn thuê!", "danger");
+    const msg =
+      err?.errors?.Comment?.[0] ||
+      err?.title ||
+      "Gửi đánh giá thất bại!";
+    showAlert(msg, "danger");
+  }
+}
+
+async function addToCart() {
+  if (!isLoggedIn) return router.push("/login");
+  await cartApi.addItem(product.value.idProduct, 1);
+  showAlert("Đã thêm vào giỏ!");
+}
+
+async function createRental() {
+  if (!isLoggedIn) return router.push("/login");
+  creating.value[product.value.idProduct] = true;
+  try {
+    const startDate = new Date().toISOString();
+    const endDate = new Date(Date.now() + 7 * 86400000).toISOString();
+    await rentalService.createRental({
+      productId: product.value.idProduct,
+      quantity: 1,
+      startDate,
+      endDate,
+    });
+    showAlert("Tạo đơn thuê thành công!");
   } finally {
     creating.value[product.value.idProduct] = false;
   }
 }
 
-// Thêm vào giỏ cho sản phẩm tương tự
 async function addToCartSimilar(id) {
-  if (!localStorage.getItem("token")) {
-    showAlert("Vui lòng đăng nhập để thêm sản phẩm!", "danger");
-    router.push("/login");
-    return;
-  }
-  try {
-    adding.value[id] = true;
-    await cartApi.addItem(id, 1);
-    showAlert("✅ Đã thêm sản phẩm vào giỏ!", "success");
-  } catch (err) {
-    console.error(err);
-    showAlert("❌ Không thể thêm sản phẩm!", "danger");
-  } finally {
-    adding.value[id] = false;
-  }
+  if (!isLoggedIn) return router.push("/login");
+  await cartApi.addItem(id, 1);
+  showAlert("Đã thêm vào giỏ!");
 }
 
-// Thuê thiết bị cho sản phẩm tương tự
 async function createRentalSimilar(p) {
-  if (!localStorage.getItem("token")) {
-    showAlert("Vui lòng đăng nhập để tạo đơn thuê!", "danger");
-    router.push("/login");
-    return;
-  }
+  if (!isLoggedIn) return router.push("/login");
   creating.value[p.idProduct] = true;
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(startDate.getDate() + 7);
-  const payload = {
-    productId: p.idProduct,
-    quantity: 1,
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString()
-  };
   try {
-    await rentalService.createRental(payload);
-    showAlert(`✅ Tạo đơn thuê thành công!`, "success");
-  } catch (err) {
-    console.error(err);
-    showAlert(err.response?.data || err.message || "❌ Không thể tạo đơn thuê!", "danger");
+    const startDate = new Date().toISOString();
+    const endDate = new Date(Date.now() + 7 * 86400000).toISOString();
+    await rentalService.createRental({
+      productId: p.idProduct,
+      quantity: 1,
+      startDate,
+      endDate,
+    });
+    showAlert("Đã tạo đơn thuê!");
   } finally {
     creating.value[p.idProduct] = false;
   }
 }
 
-// Load product và related products
 onMounted(async () => {
   const id = route.params.id;
   try {
-    // Load product
     const res = await api.get(`/Product/${id}`);
     product.value = res.data;
-    galleryImages.value = product.value.images?.length
-      ? product.value.images
-      : [product.value.image];
+    galleryImages.value =
+      product.value.images?.length > 0
+        ? product.value.images
+        : [product.value.image];
     currentImageUrl.value = getImageUrl(galleryImages.value[0]);
 
-    // Load categories
     const catRes = await api.get("/Category");
     categories.value = catRes.data;
 
-    // Load related products
-    if (product.value.categoryId) {
-      const r = await api.get("/Product", { params: { categoryId: product.value.categoryId } });
-      relatedProducts.value = r.data
-        .filter((p) => p.idProduct !== Number(id))
-        .slice(0, 4);
-    }
+    const related = await api.get("/Product", {
+      params: { categoryId: product.value.categoryId },
+    });
+    relatedProducts.value = related.data
+      .filter((p) => p.idProduct !== Number(id))
+      .slice(0, 4);
 
-    isLoading.value = false;
-  } catch (err) {
-    console.error(err);
+    await loadReviews();
+  } finally {
     isLoading.value = false;
   }
 });
@@ -408,4 +593,16 @@ onMounted(async () => {
   color: #212529;
   margin-bottom: 0.25rem;
 }
+.modal-backdrop-custom {
+  position: fixed; inset: 0;
+  display: flex; justify-content: center; align-items: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 2000;
+}
+
+.modal-content-custom {
+  width: 400px;
+  max-width: 90%;
+}
+
 </style>

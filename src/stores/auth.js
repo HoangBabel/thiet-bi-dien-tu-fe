@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import userService from "@/services/userService";
 import api from "@/services/api";
 
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null,
@@ -14,17 +16,29 @@ export const useAuthStore = defineStore("auth", {
     isLoggedIn: (state) => !!state.token,
     userId: (state) => state.user?.id || null,
     userRole: (state) => state.user?.role || "User",
+
+    /* =====================================================
+       📸 GET AVATAR URL – Fix cache, fix re-render reload
+    ===================================================== */
     avatarUrl: (state) => {
-      if (!state.user) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-      const raw = state.user.avatarUrl || state.user.avatar;
-      if (!raw) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      if (!state.user) return DEFAULT_AVATAR;
+
+      let raw = state.user.avatarUrl || state.user.avatar;
+      if (!raw) return DEFAULT_AVATAR;
+
+      // Nếu là file nội bộ → chuẩn hóa URL
       if (!raw.startsWith("http")) {
-        const clean = raw.replace(/^\/+/, "");
-        return `https://localhost:44303/${clean}?v=${Date.now()}`;
+        raw = raw.replace(/^\/+/, "");
+        return `https://localhost:44303/${raw}`;
       }
-      return `${raw}?v=${Date.now()}`;
+
+      return raw; // Không thêm timestamp ở getter nữa
     },
-    displayName: (state) => state.user?.fullName || state.user?.username || "Tài khoản",
+
+    displayName: (state) =>
+      state.user?.fullName ||
+      state.user?.username ||
+      "Tài khoản",
   },
 
   actions: {
@@ -35,6 +49,7 @@ export const useAuthStore = defineStore("auth", {
       try {
         const res = await userService.login({ email, password });
 
+        // 2FA
         if (res.data?.requiresTwoFactor || res.data?.requires2FA) {
           this.is2FARequired = true;
           this.pendingEmail = res.data.email || email;
@@ -58,7 +73,8 @@ export const useAuthStore = defineStore("auth", {
     ===================================================== */
     async verify2FA(code) {
       try {
-        if (!this.pendingEmail) throw new Error("Không tìm thấy email đang chờ xác thực.");
+        if (!this.pendingEmail)
+          throw new Error("Không tìm thấy email đang chờ xác thực.");
 
         const res = await userService.verify2FA(this.pendingEmail, code);
         const data = res.data || res;
@@ -66,8 +82,8 @@ export const useAuthStore = defineStore("auth", {
         if (data?.token) {
           this.token = data.token;
           localStorage.setItem("token", data.token);
-
           const user = await this.fetchCurrentUser();
+
           await this.applyAuthData({ token: data.token, user });
 
           this.is2FARequired = false;
@@ -89,10 +105,12 @@ export const useAuthStore = defineStore("auth", {
     async toggle2FA(password) {
       try {
         const res = await userService.toggle2FA(password);
+
         if (res.data?.isTwoFactorEnabled !== undefined) {
           this.user.isTwoFactorEnabled = res.data.isTwoFactorEnabled;
           localStorage.setItem("user", JSON.stringify(this.user));
         }
+
         return res.data;
       } catch (err) {
         console.error("❌ Lỗi toggle 2FA:", err);
@@ -104,11 +122,14 @@ export const useAuthStore = defineStore("auth", {
        🧭 CẬP NHẬT AUTH SAU LOGIN / VERIFY2FA
     ===================================================== */
     async applyAuthData(data) {
-      if (!data?.token || !data?.user) throw new Error("Phản hồi xác thực không hợp lệ.");
+      if (!data?.token || !data?.user)
+        throw new Error("Phản hồi xác thực không hợp lệ.");
 
       const user = { ...data.user };
       user.role = this.mapRole(user.role);
-      user.avatar = data.user.avatarUrl || data.user.avatar || null;
+
+      // Avatar chuẩn hóa
+      user.avatar = data.user.avatarUrl ?? data.user.avatar ?? null;
 
       this.token = data.token;
       this.user = user;
@@ -118,16 +139,19 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /* =====================================================
-       📸 CẬP NHẬT ẢNH ĐẠI DIỆN
+       📸 CẬP NHẬT AVATAR – Fix cache đúng cách
     ===================================================== */
     async updateAvatar(file) {
       try {
-        if (!this.userId) throw new Error("Không xác định được người dùng hiện tại.");
+        if (!this.userId) throw new Error("Không xác định được người dùng.");
         const res = await userService.uploadAvatar(this.userId, file);
+
         if (res.data?.avatarUrl) {
-          this.user.avatar = res.data.avatarUrl;
+          // Chỉ thêm timestamp sau upload => tránh reload liên tục
+          this.user.avatar = `${res.data.avatarUrl}?v=${Date.now()}`;
           localStorage.setItem("user", JSON.stringify(this.user));
         }
+
         return res.data;
       } catch (err) {
         console.error("❌ Lỗi cập nhật avatar:", err);
@@ -140,12 +164,15 @@ export const useAuthStore = defineStore("auth", {
     ===================================================== */
     async updateProfile(data) {
       try {
-        if (!this.userId) throw new Error("Không xác định được người dùng hiện tại.");
+        if (!this.userId) throw new Error("Không xác định được người dùng.");
+
         const res = await userService.update(this.userId, data);
+
         if (res.data) {
           this.user = { ...this.user, ...res.data };
           localStorage.setItem("user", JSON.stringify(this.user));
         }
+
         return res.data;
       } catch (err) {
         console.error("❌ Lỗi cập nhật thông tin:", err);
@@ -159,10 +186,12 @@ export const useAuthStore = defineStore("auth", {
     async fetchCurrentUser() {
       try {
         const res = await userService.getCurrentUser();
+
         if (res.data) {
           this.user = res.data;
           localStorage.setItem("user", JSON.stringify(this.user));
         }
+
         return res.data;
       } catch (err) {
         console.error("❌ Lỗi lấy thông tin người dùng:", err);
@@ -179,10 +208,12 @@ export const useAuthStore = defineStore("auth", {
         if (!refreshToken) throw new Error("Không tìm thấy refresh token.");
 
         const res = await api.post("/auth/refresh", { refreshToken });
+
         if (!res.data?.token) throw new Error("Refresh token thất bại.");
 
         this.token = res.data.token;
         localStorage.setItem("token", res.data.token);
+
         return res.data.token;
       } catch (err) {
         console.error("❌ Lỗi refresh token:", err);
@@ -205,18 +236,21 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /* =====================================================
-       🟡 LOAD LOCAL STORAGE VÀ ĐỒNG BỘ USER
+       🟡 LOAD LOCAL STORAGE – Fix vòng lặp vô hạn
     ===================================================== */
     async loadFromStorage() {
       try {
         const token = localStorage.getItem("token");
         const user = JSON.parse(localStorage.getItem("user") || "null");
+
         if (token && user) {
           this.token = token;
           this.user = user;
 
-          // ✅ Đồng bộ user mới từ API để avatar luôn chính xác
-          await this.fetchCurrentUser();
+          // Chỉ fetch nếu user thiếu avatar → tránh vòng lặp + tối ưu
+          if (!user.avatar && !user.avatarUrl) {
+            await this.fetchCurrentUser();
+          }
         } else {
           this.logout();
         }
@@ -234,7 +268,10 @@ export const useAuthStore = defineStore("auth", {
       this.user = null;
       this.is2FARequired = false;
       this.pendingEmail = null;
-      ["token", "refreshToken", "user"].forEach((k) => localStorage.removeItem(k));
+
+      ["token", "refreshToken", "user"].forEach((k) =>
+        localStorage.removeItem(k)
+      );
     },
 
     /* =====================================================
@@ -243,8 +280,10 @@ export const useAuthStore = defineStore("auth", {
     mapRole(roleValue) {
       const map = { 0: "Admin", 1: "Staff", 2: "Customer", 3: "Shipper" };
       if (typeof roleValue === "number") return map[roleValue] || "User";
+
       if (typeof roleValue === "string" && /^\d+$/.test(roleValue))
-        return map[Number(roleValue)] || roleValue;
+        return map[Number(roleValue)] || "User";
+
       return roleValue || "User";
     },
   },

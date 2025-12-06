@@ -26,7 +26,9 @@ function saveTokens(token, refreshToken) {
   if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
 }
 function clearTokens() {
-  ["token", "refreshToken", "user"].forEach((k) => localStorage.removeItem(k));
+  ["token", "refreshToken", "user"].forEach((k) =>
+    localStorage.removeItem(k)
+  );
 }
 
 /* ==========================================
@@ -139,6 +141,11 @@ export const USER_API = {
   RESEND_2FA: "/user/resend-2fa",
   TOGGLE_2FA: "/user/toggle-2fa",
   GET_2FA_STATUS: "/user/2fa-status", // endpoint kiểm tra trạng thái 2FA
+
+  // 🔄 Reset password
+  SEND_RESET_CODE: "/user/send-reset-code",
+  RESEND_RESET_CODE: "/user/resend-reset-code",
+  RESET_PASSWORD: "/user/reset-password",
 };
 
 export default api;
