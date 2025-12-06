@@ -1,5 +1,23 @@
 <template>
   <div class="container mt-4">
+    <!-- Toast góc phải -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+      <transition-group name="toast-fade">
+        <div
+          v-for="t in toasts"
+          :key="t.id"
+          class="toast align-items-center text-white border-0 show mb-2"
+          :class="t.type === 'success' ? 'bg-success' : 'bg-danger'"
+          role="alert"
+        >
+          <div class="d-flex">
+            <div class="toast-body">{{ t.message }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="removeToast(t.id)"></button>
+          </div>
+        </div>
+      </transition-group>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero-section text-center p-5 rounded-4 shadow-sm mb-5">
       <h1 class="display-5 fw-bold mb-3 text-primary">
@@ -59,15 +77,6 @@
                     <span v-if="!adding[p.idProduct]"> Thêm vào giỏ</span>
                   </button>
 
-                  <transition name="fade">
-                    <div
-                      v-if="alertMessages[p.idProduct]"
-                      class="alert mt-2 py-1 text-center"
-                      :class="alertTypes[p.idProduct] === 'success' ? 'alert-success' : 'alert-danger'"
-                    >
-                      {{ alertMessages[p.idProduct] }}
-                    </div>
-                  </transition>
                 </div>
               </div>
             </div>
@@ -126,15 +135,6 @@
                     <span v-if="!creating[p.idProduct]"> Thuê Thiết Bị</span>
                   </button>
 
-                  <transition name="fade">
-                    <div
-                      v-if="alertMessages[p.idProduct]"
-                      class="alert mt-2 py-1 text-center"
-                      :class="alertTypes[p.idProduct] === 'success' ? 'alert-success' : 'alert-danger'"
-                    >
-                      {{ alertMessages[p.idProduct] }}
-                    </div>
-                  </transition>
                 </div>
               </div>
             </div>
@@ -148,45 +148,43 @@
       </div>
     </section>
 
-    <!-- 🎁 Ưu đãi mã giảm giá -->
+    <!-- 🎁 Mã giảm giá -->
     <section class="mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3 class="fw-bold text-dark mb-0">🎁 Mã Giảm Giá Hiện Có</h3>
-      <router-link to="/vouchers" class="btn btn-outline-primary btn-sm">
-        Xem tất cả
-      </router-link>
-    </div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold text-dark mb-0">🎁 Mã Giảm Giá Hiện Có</h3>
+        <router-link to="/vouchers" class="btn btn-outline-primary btn-sm">
+          Xem tất cả
+        </router-link>
+      </div>
 
-    <div class="row g-4">
-      <div class="col-md-3 col-sm-6" v-for="v in randomVouchers" :key="v.voucherId">
-        <div class="card shadow-sm h-100 voucher-card p-3">
-          <h5 class="fw-bold text-primary">{{ v.code }}</h5>
-          <p class="text-muted small mb-1">{{ v.description }}</p>
+      <div class="row g-4">
+        <div class="col-md-3 col-sm-6" v-for="v in randomVouchers" :key="v.voucherId">
+          <div class="card shadow-sm h-100 voucher-card p-3">
+            <h5 class="fw-bold text-primary">{{ v.code }}</h5>
+            <p class="text-muted small mb-1">{{ v.description }}</p>
 
-          <p class="fw-bold text-success">
-            Giảm:
-            <span v-if="v.discountType === 'percent'">
-              {{ v.discountValue }}%
-            </span>
-            <span v-else>
-              {{ formatPrice(v.discountValue) }}
-            </span>
-          </p>
+            <p class="fw-bold text-success">
+              Giảm:
+              <span v-if="v.discountType === 'percent'">
+                {{ v.discountValue }}%
+              </span>
+              <span v-else>{{ formatPrice(v.discountValue) }}</span>
+            </p>
 
-          <button class="btn btn-primary btn-sm mt-auto" @click="copyVoucher(v.code)">
-            <i class="bi bi-clipboard"></i> Copy mã
-          </button>
+            <button class="btn btn-info btn-sm mt-auto" @click="copyVoucher(v.code)">
+              <i class="bi bi-clipboard"></i> Copy mã
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="randomVouchers.length === 0" class="text-center text-muted mt-4">
-      <i class="bi bi-ticket fs-3 d-block mb-2"></i>
-      Hiện chưa có mã giảm giá nào.
-    </div>
+      <div v-if="randomVouchers.length === 0" class="text-center text-muted mt-4">
+        <i class="bi bi-ticket fs-3 d-block mb-2"></i>
+        Hiện chưa có mã giảm giá nào.
+      </div>
     </section>
 
-    <!-- Ưu điểm nền tảng -->
+    <!-- Ưu điểm -->
     <section class="benefit-section mt-5 py-4 rounded-4 shadow-sm">
       <div class="row text-center">
         <div class="col-md-4">
@@ -210,49 +208,60 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
 import rentalService from "@/services/rentalService";
 import voucherService from "@/services/voucherService";
-import defaultImage from "@/assets/no-image.png";
 import { useRouter } from "vue-router";
+import defaultImage from "@/assets/no-image.png";
 
 const backendUrl = "https://localhost:44303";
-const featured = ref([]);
-const adding = ref({});
-const creating = ref({});
-const alertMessages = ref({});
-const alertTypes = ref({});
-const categories = ref([]);
-const vouchers = ref([]);
-const router = useRouter();
-const randomVouchers = computed(() =>
-  shuffleArray(vouchers.value).slice(0, 4)
-);
 
-function shuffleArray(arr) {
-  return arr
-    .map(v => ({ v, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ v }) => v);
+const router = useRouter();
+
+// === TOAST SYSTEM ===
+const toasts = ref([]);
+
+function showToast(message, type = "success") {
+  const id = Date.now();
+  toasts.value.push({ id, message, type });
+
+  setTimeout(() => removeToast(id), 3000);
 }
 
-// 🚀 Load voucher từ VoucherService
+function removeToast(id) {
+  toasts.value = toasts.value.filter(t => t.id !== id);
+}
+
+// === DATA ===
+const featured = ref([]);
+const categories = ref([]);
+const vouchers = ref([]);
+
+const adding = ref({});
+const creating = ref({});
+
+// Shuffle helper
+function shuffleArray(arr) {
+  return arr.map(v => ({ v, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(x => x.v);
+}
+
+// Voucher section
 async function loadVouchers() {
   try {
-    const res = await voucherService.getAll(); 
+    const res = await voucherService.getAll();
     vouchers.value = res || [];
-  } catch (err) {
-    console.error("Lỗi tải voucher:", err);
+  } catch (e) {
+    console.error("Lỗi tải voucher:", e);
   }
 }
 
-function copyVoucher(code) {
-  navigator.clipboard.writeText(code);
-  alert("Đã copy mã: " + code);
-}
+const randomVouchers = computed(() => shuffleArray(vouchers.value).slice(0, 4));
 
+// Products
 async function loadFeatured() {
   try {
     const res = await api.get("/Product");
@@ -274,17 +283,21 @@ async function loadCategories() {
 const shuffledBuyProducts = computed(() =>
   shuffleArray(featured.value.filter(p => !p.isRental)).slice(0, 4)
 );
+
 const shuffledRentalProducts = computed(() =>
   shuffleArray(featured.value.filter(p => p.isRental)).slice(0, 4)
 );
 
+// Helpers
 function formatPrice(value) {
   return value ? value.toLocaleString("vi-VN") + " ₫" : "0 ₫";
 }
 
 function getImageUrl(path) {
   if (!path) return defaultImage;
-  return path.startsWith("http") ? path : `${backendUrl}/${path.replace(/^\/+/, "")}`;
+  return path.startsWith("http")
+    ? path
+    : `${backendUrl}/${path.replace(/^\/+/, "")}`;
 }
 
 function handleImageError(e) {
@@ -296,83 +309,93 @@ function getCategoryName(id) {
   return c ? c.name : "Không có danh mục";
 }
 
-function showAlertForProduct(productId, message, type = "success") {
-  alertMessages.value[productId] = message;
-  alertTypes.value[productId] = type;
-  setTimeout(() => {
-    alertMessages.value[productId] = "";
-  }, 3000);
-}
-
+// === CART ===
 async function addToCart(productId) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(productId, "Vui lòng đăng nhập để thêm sản phẩm!", "danger");
+    showToast("Vui lòng đăng nhập để thêm sản phẩm!", "danger");
     router.push("/login");
     return;
   }
+
   try {
     adding.value[productId] = true;
     await cartApi.addItem(productId, 1);
-    showAlertForProduct(productId, "✔ Đã thêm sản phẩm vào giỏ!", "success");
-  } catch (err) {
-    console.error(err);
-    showAlertForProduct(productId, "❌ Không thể thêm sản phẩm!", "danger");
+    showToast("✔ Đã thêm vào giỏ hàng!", "success");
+  } catch (_) {
+    showToast("❌ Không thể thêm vào giỏ!", "danger");
   } finally {
     adding.value[productId] = false;
   }
 }
 
+// === RENTAL ===
 async function createRental(p) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(p.idProduct, "Vui lòng đăng nhập để tạo đơn thuê!", "danger");
+    showToast("Vui lòng đăng nhập để thuê thiết bị!", "danger");
     router.push("/login");
     return;
   }
-  creating.value[p.idProduct] = true;
 
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(startDate.getDate() + 7);
+  creating.value[p.idProduct] = true;
 
   const payload = {
     productId: p.idProduct,
     quantity: 1,
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString()
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString()
   };
 
   try {
     await rentalService.createRental(payload);
-    showAlertForProduct(p.idProduct, "✔ Tạo đơn thuê thành công!", "success");
+    showToast("✔ Tạo đơn thuê thành công!", "success");
   } catch (err) {
-    console.error(err);
-    showAlertForProduct(
-      p.idProduct,
-      err.response?.data || err.message || "❌ Không thể tạo đơn thuê!",
-      "danger"
-    );
+    showToast("❌ Không thể tạo đơn thuê!", "danger");
   } finally {
     creating.value[p.idProduct] = false;
   }
 }
 
-// 🚀 Load tất cả dữ liệu khi vào trang
+// === COPY VOUCHER ===
+function copyVoucher(code) {
+  navigator.clipboard.writeText(code);
+  showToast("📋 Đã copy mã: " + code, "success");
+}
+
+// Load on mount
 onMounted(() => {
-  loadCategories();
   loadFeatured();
-  loadVouchers(); // <--- thêm vào
+  loadCategories();
+  loadVouchers();
 });
 </script>
 
 <style scoped>
-/* ======= HERO ======= */
+/* ===== TOAST ===== */
+.toast-container {
+  z-index: 9999;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: all 0.4s ease;
+}
+.toast-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* ===== HERO ===== */
 .hero-section {
   background: linear-gradient(180deg, #ffffff 0%, #f4f5f7 100%);
   color: #212529;
   border: 1px solid #dee2e6;
 }
 
-/* ======= CARD ======= */
+/* ===== CARD ===== */
 .product-card {
   background-color: #ffffff;
   border: 1px solid #dee2e6;
@@ -410,7 +433,7 @@ onMounted(() => {
   margin-bottom: 0.25rem;
 }
 
-/* ======= BUTTONS ======= */
+/* Buttons */
 .btn-primary {
   background-color: #003366;
   border-color: #003366;
@@ -424,42 +447,22 @@ onMounted(() => {
 }
 .btn-outline-primary:hover {
   background-color: #003366;
-  color: #fff;
-}
-.btn-success {
-  background-color: #198754;
-  border-color: #198754;
-}
-.btn-success:hover {
-  background-color: #157347;
+  color: white;
 }
 
-/* ======= ALERT FADE ======= */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.4s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* ======= BENEFIT SECTION ======= */
+/* Benefit */
 .benefit-section {
   background-color: #ffffff;
   border: 1px solid #dee2e6;
 }
-.text-primary {
-  color: #003366 !important;
-}
 
+/* Voucher */
 .voucher-card {
-  border-radius: 14px;
   border: 1px dashed #003366;
   background: #f8fbff;
-  transition: transform 0.2s ease;
+  border-radius: 14px;
+  transition: 0.2s;
 }
-
 .voucher-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);

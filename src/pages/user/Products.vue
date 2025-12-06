@@ -1,5 +1,23 @@
 <template>
   <div class="product-page container mt-5">
+
+    <!-- GLOBAL TOAST -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999">
+      <div
+        v-for="(t, index) in toasts"
+        :key="index"
+        class="toast align-items-center text-white border-0 show mb-2"
+        :class="t.type === 'success' ? 'bg-success' : 'bg-danger'"
+        role="alert"
+      >
+        <div class="d-flex">
+          <div class="toast-body">{{ t.message }}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="removeToast(index)"></button>
+        </div>
+      </div>
+    </div>
+    <!-- END TOAST -->
+
     <!-- Tiêu đề -->
     <section class="text-center mb-5">
       <h2 class="fw-bold text-primary mb-3">🛒 Danh sách sản phẩm</h2>
@@ -11,8 +29,6 @@
     <!-- Bộ lọc -->
     <section class="filter-bar shadow-sm bg-white rounded p-3 mb-4">
       <div class="row g-3 justify-content-center align-items-center">
-
-        <!-- Search -->
         <div class="col-md-4 col-sm-6">
           <input
             type="text"
@@ -23,7 +39,6 @@
           />
         </div>
 
-        <!-- Danh mục -->
         <div class="col-md-3 col-sm-6">
           <select v-model="selectedCategory" class="form-select" @change="applyFilters">
             <option value="">-- Tất cả danh mục --</option>
@@ -33,7 +48,6 @@
           </select>
         </div>
 
-        <!-- Lọc loại sản phẩm -->
         <div class="col-md-3 col-sm-6">
           <select v-model="selectedType" class="form-select" @change="applyFilters">
             <option value="">-- Mua & Thuê --</option>
@@ -42,7 +56,6 @@
           </select>
         </div>
 
-        <!-- Buttons -->
         <div class="col-md-2 d-flex gap-2 justify-content-center">
           <button class="btn btn-primary flex-grow-1" @click="applyFilters">
             <i class="bi bi-funnel"></i> Lọc
@@ -56,21 +69,23 @@
 
     <!-- Danh sách sản phẩm -->
     <section class="row g-4">
-      <!-- Skeleton loading -->
+
       <template v-if="loading">
-        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6" v-for="n in pageSize" :key="'skeleton-' + n">
+        <div
+          class="col-xl-3 col-lg-4 col-md-6 col-sm-6"
+          v-for="n in pageSize"
+          :key="'skeleton-' + n"
+        >
           <div class="skeleton-card"></div>
         </div>
       </template>
 
-      <!-- Sản phẩm -->
       <template v-else>
         <div
           class="col-xl-3 col-lg-4 col-md-6 col-sm-6"
           v-for="p in products"
           :key="p.idProduct"
         >
-          <!-- Inline ProductCard -->
           <div class="product-card card h-100 shadow-sm">
             <div class="image-wrapper">
               <img
@@ -89,8 +104,9 @@
 
               <div>
                 <p class="fw-bold text-primary mb-3">{{ formatPrice(p.price) }}</p>
+
                 <div class="d-grid gap-2">
-                  <!-- Xem chi tiết luôn hiển thị -->
+
                   <router-link
                     :to="`/products/${p.idProduct}`"
                     class="btn btn-outline-primary btn-sm"
@@ -98,11 +114,10 @@
                     Xem chi tiết
                   </router-link>
 
-                  <!-- Nút thêm vào giỏ chỉ hiện với sản phẩm bán -->
                   <button
                     v-if="!p.isRental"
                     class="btn btn-success btn-sm"
-                    @click="addToCart(p.idProduct)"
+                    @click="addToCart(p.idProduct, p.name)"
                     :disabled="adding[p.idProduct]"
                   >
                     <span v-if="adding[p.idProduct]" class="spinner-border spinner-border-sm"></span>
@@ -110,7 +125,6 @@
                     <span v-if="!adding[p.idProduct]"> Thêm vào giỏ hàng </span>
                   </button>
 
-                  <!-- Nút tạo đơn thuê chỉ hiện với sản phẩm cho thuê -->
                   <button
                     v-if="p.isRental"
                     class="btn btn-primary btn-sm"
@@ -122,25 +136,13 @@
                     <span v-if="!creating[p.idProduct]"> Thuê thiết bị </span>
                   </button>
 
-                  <!-- Alert thông báo cho từng sản phẩm -->
-                  <transition name="fade">
-                    <div
-                      v-if="alertMessages[p.idProduct]"
-                      class="alert mt-2 py-1 text-center"
-                      :class="alertTypes[p.idProduct] === 'success' ? 'alert-success' : 'alert-danger'"
-                    >
-                      {{ alertMessages[p.idProduct] }}
-                    </div>
-                  </transition>
                 </div>
               </div>
             </div>
           </div>
-          <!-- END ProductCard -->
         </div>
       </template>
 
-      <!-- Không có sản phẩm -->
       <div v-if="!loading && products.length === 0" class="text-center text-muted mt-5">
         <i class="bi bi-search fs-3 d-block mb-2"></i>
         Không tìm thấy sản phẩm phù hợp.
@@ -170,76 +172,76 @@
         </li>
       </ul>
     </nav>
+
   </div>
 </template>
 
 <script setup>
+/* ————— IMPORT ————— */
 import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
 import rentalService from "@/services/rentalService";
 import defaultImage from "@/assets/no-image.png";
-
-// ===== Rental =====
 import { useRentalCartStore } from "@/stores/rentalCart";
-const rentalCartStore = useRentalCartStore();
 
+const rentalCartStore = useRentalCartStore();
 const backendUrl = "https://localhost:44303";
+
 const route = useRoute();
 const router = useRouter();
 
+/* ————— STATE ————— */
 const allProducts = ref([]);
 const products = ref([]);
 const categories = ref([]);
-
 const search = ref(route.query.search || "");
 const selectedCategory = ref(route.query.category || "");
-
-// 🔥 Filter mới
 const selectedType = ref(route.query.type || "");
-
 const currentPage = ref(parseInt(route.query.page) || 1);
 const pageSize = 12;
 const totalPages = ref(1);
 const adding = ref({});
 const creating = ref({});
-const alertMessages = ref({});
-const alertTypes = ref({});
 const loading = ref(false);
 
-// ===== Helpers =====
+/* 🍞 Toast list */
+const toasts = ref([]);
+
+/* ————— TOAST FUNCTIONS ————— */
+function showToast(message, type = "success") {
+  toasts.value.push({ message, type });
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 2500);
+}
+function removeToast(index) {
+  toasts.value.splice(index, 1);
+}
+
+/* ————— HELPERS ————— */
 function getImageUrl(path) {
   if (!path) return defaultImage;
   return path.startsWith("http")
     ? path
     : `${backendUrl}/${path.replace(/^\/+/, "")}`;
 }
-
 function fallbackImage(e) {
   e.target.src = defaultImage;
 }
-
 function formatPrice(value) {
   return value ? value.toLocaleString("vi-VN") + " ₫" : "0 ₫";
 }
-
-function showAlertForProduct(productId, message, type = "success") {
-  alertMessages.value[productId] = message;
-  alertTypes.value[productId] = type;
-  setTimeout(() => {
-    alertMessages.value[productId] = "";
-  }, 3000);
+function getCategoryName(id) {
+  const c = categories.value.find((x) => x.categoryId === id);
+  return c ? c.name : "Không có danh mục";
 }
 
-// ===== Load Data =====
+/* ————— LOAD DATA ————— */
 async function loadCategories() {
-  try {
-    const res = await api.get("/Category");
-    categories.value = res.data;
-  } catch (err) {
-    console.error("Lỗi tải danh mục:", err);
-  }
+  const res = await api.get("/Category");
+  categories.value = res.data;
 }
 
 async function loadAllProducts() {
@@ -254,22 +256,15 @@ async function loadAllProducts() {
 
     let items = res.data.items || res.data;
 
-    // 🔥 lọc theo loại sản phẩm (mua/thuê)
-    if (selectedType.value === "buy") {
-      items = items.filter(x => !x.isRental);
-    } else if (selectedType.value === "rent") {
-      items = items.filter(x => x.isRental);
-    }
+    if (selectedType.value === "buy") items = items.filter(x => !x.isRental);
+    if (selectedType.value === "rent") items = items.filter(x => x.isRental);
 
-    // 🔥🔥 RANDOM SẢN PHẨM
     items = items.sort(() => Math.random() - 0.5);
 
     allProducts.value = items;
-    totalPages.value = Math.ceil(allProducts.value.length / pageSize);
+    totalPages.value = Math.ceil(items.length / pageSize);
 
     updateProductsByPage();
-  } catch (err) {
-    console.error("Lỗi tải sản phẩm:", err);
   } finally {
     loading.value = false;
   }
@@ -277,13 +272,12 @@ async function loadAllProducts() {
 
 function updateProductsByPage() {
   const start = (currentPage.value - 1) * pageSize;
-  const end = start + pageSize;
-  products.value = allProducts.value.slice(start, end);
+  products.value = allProducts.value.slice(start, start + pageSize);
 }
 
+/* ————— FILTER & PAGINATION ————— */
 function applyFilters() {
   currentPage.value = 1;
-
   router.push({
     path: "/products",
     query: {
@@ -293,7 +287,6 @@ function applyFilters() {
       page: 1
     }
   });
-
   loadAllProducts();
 }
 
@@ -309,8 +302,8 @@ function resetFilters() {
 
 function changePage(page) {
   if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
 
+  currentPage.value = page;
   router.push({
     path: "/products",
     query: {
@@ -324,34 +317,28 @@ function changePage(page) {
   updateProductsByPage();
 }
 
-function getCategoryName(id) {
-  const c = categories.value.find((x) => x.categoryId === id);
-  return c ? c.name : "Không có danh mục";
-}
-
-// ===== Cart =====
-async function addToCart(productId) {
+/* ————— CART ————— */
+async function addToCart(productId, name) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(productId, "Vui lòng đăng nhập để thêm sản phẩm!", "danger");
+    showToast("Vui lòng đăng nhập để thêm sản phẩm", "danger");
     router.push("/login");
     return;
   }
   try {
     adding.value[productId] = true;
     await cartApi.addItem(productId, 1);
-    showAlertForProduct(productId, "✅ Đã thêm sản phẩm vào giỏ!", "success");
-  } catch (err) {
-    console.error(err);
-    showAlertForProduct(productId, "❌ Không thể thêm sản phẩm!", "danger");
+    showToast(`Đã thêm "${name}" vào giỏ hàng!`, "success");
+  } catch (e) {
+    showToast("Không thể thêm sản phẩm!", "danger");
   } finally {
     adding.value[productId] = false;
   }
 }
 
-// ===== Rental =====
+/* ————— RENTAL ————— */
 async function createRental(p) {
   if (!localStorage.getItem("token")) {
-    showAlertForProduct(p.idProduct, "Vui lòng đăng nhập để tạo đơn thuê!", "danger");
+    showToast("Vui lòng đăng nhập để thuê sản phẩm", "danger");
     router.push("/login");
     return;
   }
@@ -371,16 +358,15 @@ async function createRental(p) {
 
   try {
     await rentalService.createRental(payload);
-    showAlertForProduct(p.idProduct, `✅ Tạo đơn thuê thành công!`, "success");
-  } catch (err) {
-    console.error(err);
-    showAlertForProduct(p.idProduct, "❌ Không thể tạo đơn thuê!", "danger");
+    showToast(`Tạo đơn thuê thiết bị "${p.name}" thành công!`, "success");
+  } catch {
+    showToast("Không thể tạo đơn thuê!", "danger");
   } finally {
     creating.value[p.idProduct] = false;
   }
 }
 
-// Watch route query để sync filter
+/* ————— WATCH ROUTE ————— */
 watch(
   () => route.query,
   () => {
@@ -388,7 +374,6 @@ watch(
     selectedCategory.value = route.query.category || "";
     selectedType.value = route.query.type || "";
     currentPage.value = parseInt(route.query.page) || 1;
-
     updateProductsByPage();
   },
   { immediate: true }
@@ -401,21 +386,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ===== PAGE ===== */
+/* Toast size */
+.toast {
+  min-width: 260px;
+}
+
+/* PAGE */
 .product-page {
   background-color: #f8f9fa;
   border-radius: 12px;
   padding: 2rem;
 }
 
-/* ===== FILTER BAR ===== */
+/* FILTER BAR */
 .filter-bar {
   border: 1px solid #e5e7eb;
 }
 .form-control,
 .form-select {
   border-radius: 10px;
-  transition: 0.2s;
 }
 .form-control:focus,
 .form-select:focus {
@@ -423,13 +412,11 @@ onMounted(() => {
   box-shadow: 0 0 0 0.15rem rgba(0, 51, 102, 0.25);
 }
 
-/* ===== PRODUCT CARD ===== */
+/* PRODUCT CARD */
 .product-card {
   border-radius: 16px;
   overflow: hidden;
   transition: 0.25s;
-  display: flex;
-  flex-direction: column;
 }
 .product-card:hover {
   transform: translateY(-6px);
@@ -441,37 +428,21 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom: 1px solid #e9ecef;
 }
 .image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: 0.3s;
-}
-.image-wrapper:hover img {
-  transform: scale(1.05);
 }
 .product-name {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #212529;
-  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ===== ALERT FADE ===== */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.4s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* ===== SKELETON ===== */
+/* SKELETON */
 .skeleton-card {
   height: 350px;
   border-radius: 16px;
@@ -484,11 +455,10 @@ onMounted(() => {
   100% { background-position: -200% 0; }
 }
 
-/* ===== PAGINATION ===== */
+/* PAGINATION */
 .pagination .page-link {
   color: #003366;
   border-radius: 8px;
-  transition: 0.2s;
 }
 .pagination .page-item.active .page-link {
   background-color: #003366;

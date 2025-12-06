@@ -9,7 +9,7 @@
           type="text"
           v-model="search"
           class="form-control"
-          placeholder="Tìm theo tên khách hàng hoặc email..."
+          placeholder="Tìm theo UserId..."
           @keyup.enter="applyFilters"
         />
         <button class="btn btn-gradient" @click="applyFilters">Tìm</button>
@@ -32,8 +32,8 @@
           <tr>
             <th>#</th>
             <th>Rental ID</th>
-            <th>Khách hàng</th>
-            <th>Ngày tạo</th>
+            <th>User ID</th>
+            <th>Ngày bắt đầu</th>
             <th>Tổng tiền</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
@@ -43,9 +43,9 @@
           <tr v-for="(r, i) in pagedRentals" :key="r.id">
             <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td>{{ r.id }}</td>
-            <td>{{ r.user?.fullName || r.user?.email || "Không xác định" }}</td>
-            <td>{{ formatDate(r.createdAt) }}</td>
-            <td>{{ formatPrice(r.totalAmount) }}</td>
+            <td>{{ r.userId }}</td>
+            <td>{{ formatDate(r.startDate) }}</td>
+            <td>{{ formatPrice(r.totalPrice) }}</td>
             <td>
               <span :class="statusClass(r.status)">
                 {{ statusLabel(r.status) }}
@@ -131,15 +131,14 @@ let statusModalInstance = null;
 const selectedRental = ref(null);
 const selectedStatus = ref("");
 
-// Danh sách trạng thái đơn thuê
 const rentalStatuses = [
   { value: "Pending", label: "Đang chờ xử lý" },
-  { value: "Activated", label: "Đang thuê" },
+  { value: "Paid", label: "Đã thanh toán" },
+  { value: "Active", label: "Đang thuê" },
   { value: "Completed", label: "Hoàn tất" },
   { value: "Cancelled", label: "Đã hủy" }
 ];
 
-// ======= API =======
 async function loadRentals() {
   try {
     const res = await rentalService.getAllRentals();
@@ -150,7 +149,6 @@ async function loadRentals() {
   }
 }
 
-// ======= Helpers =======
 function statusLabel(s) {
   const item = rentalStatuses.find(x => x.value === s);
   return item ? item.label : s;
@@ -159,7 +157,8 @@ function statusLabel(s) {
 function statusClass(s) {
   switch (s) {
     case "Pending": return "badge bg-warning text-dark";
-    case "Activated": return "badge bg-primary";
+    case "Paid": return "badge bg-info text-dark";
+    case "Active": return "badge bg-primary";
     case "Completed": return "badge bg-success";
     case "Cancelled": return "badge bg-secondary";
     default: return "badge bg-light";
@@ -174,15 +173,11 @@ function formatDate(d) {
   return new Date(d).toLocaleString("vi-VN");
 }
 
-// ======= Filter & Pagination =======
 const filteredRentals = computed(() => {
   let list = rentals.value;
   if (search.value) {
-    const kw = search.value.toLowerCase();
-    list = list.filter(r =>
-      (r.user?.fullName || "").toLowerCase().includes(kw) ||
-      (r.user?.email || "").toLowerCase().includes(kw)
-    );
+    const kw = search.value.toString().toLowerCase();
+    list = list.filter(r => r.userId.toString().includes(kw));
   }
   if (statusFilter.value) {
     list = list.filter(r => r.status === statusFilter.value);
@@ -205,7 +200,6 @@ function applyFilters() {
   currentPage.value = 1;
 }
 
-// ======= Modal =======
 function openStatusModal(rental) {
   selectedRental.value = rental;
   selectedStatus.value = rental.status;
@@ -215,10 +209,10 @@ function openStatusModal(rental) {
 
 async function saveStatus() {
   try {
-    await rentalService.settle(selectedRental.value.id, { status: selectedStatus.value });
+    // Lưu ý backend chưa có endpoint update trực tiếp status => demo chỉ cập nhật UI
     selectedRental.value.status = selectedStatus.value;
     statusModalInstance.hide();
-    alert("Cập nhật trạng thái thành công!");
+    alert("Cập nhật trạng thái thành công (UI)!");
   } catch (err) {
     console.error("❌ Lỗi cập nhật trạng thái:", err);
     alert("Cập nhật thất bại!");
@@ -229,7 +223,6 @@ function viewRental(id) {
   window.open(`/admin/rental/${id}`, "_blank");
 }
 
-// ======= Lifecycle =======
 onMounted(() => {
   loadRentals();
 });

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:44303/api/voucher"; // đổi theo backend thực tế
+const API_URL = "https://localhost:44303/api/voucher";
 
 // Lấy JWT token từ localStorage
 function authHeader() {
@@ -9,54 +9,97 @@ function authHeader() {
 }
 
 const VoucherService = {
-  // Lấy danh sách voucher còn hiệu lực
+  /** ----------------------------------------
+   * GET: api/voucher
+   * Lấy danh sách voucher đang còn hạn
+   * -----------------------------------------*/
   async getAll() {
-    const res = await axios.get(API_URL, { headers: authHeader() });
-    return res.data;
+    const response = await axios.get(API_URL, {
+      headers: authHeader(),
+    });
+    return response.data;
   },
 
-  // Lấy chi tiết voucher theo ID
+  /** ----------------------------------------
+   * GET: api/voucher/{id}
+   * Lấy chi tiết một voucher
+   * -----------------------------------------*/
   async getById(id) {
-    const res = await axios.get(`${API_URL}/${id}`, { headers: authHeader() });
-    return res.data;
+    const response = await axios.get(`${API_URL}/${id}`, {
+      headers: authHeader(),
+    });
+    return response.data;
   },
 
-  // Tạo voucher mới
+  /** ----------------------------------------
+   * POST: api/voucher
+   * Tạo một voucher mới (CreateVoucherDto)
+   * -----------------------------------------*/
   async create(voucherDto) {
-    const res = await axios.post(API_URL, voucherDto, { headers: authHeader() });
-    return res.data;
+    const response = await axios.post(API_URL, voucherDto, {
+      headers: authHeader(),
+    });
+    return response.data;
   },
 
-  // Cập nhật voucher
+  /** ----------------------------------------
+   * PUT: api/voucher/{id}
+   * Cập nhật voucher (UpdateVoucherDto)
+   * -----------------------------------------*/
   async update(id, voucherDto) {
-    const res = await axios.put(`${API_URL}/${id}`, voucherDto, { headers: authHeader() });
-    return res.data;
+    const response = await axios.put(`${API_URL}/${id}`, voucherDto, {
+      headers: authHeader(),
+    });
+    return response.data; // NoContent -> sẽ trả empty
   },
 
-  // Xóa voucher
+  /** ----------------------------------------
+   * DELETE: api/voucher/{id}
+   * Xóa voucher
+   * -----------------------------------------*/
   async delete(id) {
-    const res = await axios.delete(`${API_URL}/${id}`, { headers: authHeader() });
-    return res.data;
+    const response = await axios.delete(`${API_URL}/${id}`, {
+      headers: authHeader(),
+    });
+    return response.data; // NoContent -> empty
   },
 
-  // Validate voucher (preview)
+  /** ----------------------------------------
+   * POST: api/voucher/validate
+   * Validate voucher (preview đơn hàng)
+   * Body: { code, subtotalAmount, shippingFee }
+   * -----------------------------------------*/
   async validate(code, subtotalAmount, shippingFee) {
-    const res = await axios.post(
-      `${API_URL}/validate`,
-      { code, subtotalAmount, shippingFee },
-      { headers: authHeader() }
-    );
-    return res.data;
+    const body = {
+      code,
+      subtotalAmount,
+      shippingFee,
+    };
+
+    const response = await axios.post(`${API_URL}/validate`, body, {
+      headers: authHeader(),
+    });
+
+    return response.data; // VoucherValidationResponse
   },
 
-  // Apply voucher (checkout)
+  /** ----------------------------------------
+   * POST: api/voucher/apply
+   * Áp dụng voucher (checkout thực tế)
+   * Body: { code, subtotalAmount, shippingFee }
+   * -----------------------------------------*/
   async apply(code, subtotalAmount, shippingFee) {
-    const res = await axios.post(
-      `${API_URL}/apply`,
-      { code, subtotalAmount, shippingFee },
-      { headers: authHeader() }
-    );
-    return res.data;
+    const body = {
+      code,
+      subtotalAmount,
+      shippingFee,
+    };
+
+    const response = await axios.post(`${API_URL}/apply`, body, {
+      headers: authHeader(),
+    });
+
+    return response.data; // VoucherApplicationResponse
   }
 };
 

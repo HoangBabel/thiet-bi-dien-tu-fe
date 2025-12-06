@@ -18,7 +18,7 @@
           </span>
         </div>
 
-        <!-- Gallery ảnh nhỏ -->
+        <!-- Gallery -->
         <div
           v-if="galleryImages.length > 1"
           class="thumb-gallery mt-3 d-flex justify-content-center gap-2 flex-wrap"
@@ -34,7 +34,7 @@
         </div>
       </div>
 
-      <!-- Thông tin cơ bản -->
+      <!-- Thông tin -->
       <div class="col-md-7">
         <h2 class="fw-bold text-primary mb-2">{{ product.name }}</h2>
 
@@ -43,7 +43,7 @@
           <template v-if="product.categoryId">
             <router-link
               :to="`/category/${product.categoryId}`"
-              class="fw-semibold text-decoration-none text-primary hover-underline"
+              class="fw-semibold text-decoration-none text-primary"
             >
               {{ getCategoryName(product.categoryId) }}
             </router-link>
@@ -61,19 +61,11 @@
 
         <!-- Nút hành động -->
         <div class="d-grid gap-2">
-          <button
-            v-if="!product.isRental"
-            class="btn btn-success"
-            @click="addToCart"
-          >
+          <button v-if="!product.isRental" class="btn btn-success" @click="addToCart">
             <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ hàng
           </button>
 
-          <button
-            v-if="product.isRental"
-            class="btn btn-primary"
-            @click="createRental"
-          >
+          <button v-if="product.isRental" class="btn btn-primary" @click="createRental">
             <i class="bi bi-calendar2-week me-1"></i> Thuê thiết bị
           </button>
 
@@ -82,20 +74,10 @@
           </button>
         </div>
 
-        <!-- Thông báo -->
-        <transition name="fade">
-          <div
-            v-if="alertMessage"
-            class="alert mt-3 py-2 text-center"
-            :class="alertType === 'success' ? 'alert-success' : 'alert-danger'"
-          >
-            {{ alertMessage }}
-          </div>
-        </transition>
       </div>
     </div>
 
-    <!-- Tabs thông tin -->
+    <!-- Tabs -->
     <div class="mt-5">
       <ul class="nav nav-tabs border-0">
         <li class="nav-item">
@@ -118,94 +100,66 @@
           <ul class="mb-0 small">
             <li>✔ Bảo hành chính hãng 12 tháng.</li>
             <li>✔ Đổi trả trong 7 ngày nếu lỗi kỹ thuật.</li>
-            <li>✔ Hỗ trợ kỹ thuật miễn phí suốt thời gian sử dụng.</li>
+            <li>✔ Hỗ trợ kỹ thuật miễn phí.</li>
           </ul>
         </div>
       </div>
     </div>
 
-<!-- Reviews -->
-<div class="mt-5" v-if="reviews">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-semibold text-primary">
-      ⭐ Đánh giá & Nhận xét ({{ reviews.total }})
-    </h4>
+    <!-- Reviews -->
+    <div class="mt-5" v-if="reviews">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-semibold text-primary">⭐ Đánh giá & Nhận xét ({{ reviews.total }})</h4>
 
-    <button
-      class="btn btn-outline-primary"
-      @click="openReviewModal"
-      v-if="isLoggedIn"
-    >
-      <i class="bi bi-pencil-square me-1"></i> Viết đánh giá
-    </button>
-    <button
-      class="btn btn-outline-danger"
-      disabled
-      v-else
-    >
-      🔒 Đăng nhập để đánh giá
-    </button>
-  </div>
-
-  <!-- Thống kê -->
-  <div class="mb-3" v-if="reviews.averageRating">
-    <span class="fw-bold fs-5 text-warning">
-      {{ reviews.averageRating.toFixed(1) }} / 5 ⭐
-    </span>
-    <p class="text-muted small mb-0">
-      Dựa trên {{ reviews.total }} lượt đánh giá
-    </p>
-  </div>
-
-  <!-- Danh sách review -->
-  <div v-if="reviews.data.length > 0">
-    <div
-      v-for="rv in reviews.data"
-      :key="rv.id"
-      class="p-3 border rounded mb-3 bg-white shadow-sm"
-    >
-      <div class="d-flex align-items-center mb-1">
-        <strong class="me-2">{{ rv.userName || "Người dùng" }}</strong>
-
-        <span v-for="i in 5" :key="i">
-          <i class="bi"
-             :class="i <= rv.rating ? 'bi-star-fill text-warning' : 'bi-star text-muted'"></i>
-        </span>
-
-        <span class="text-muted small ms-2">
-          {{ new Date(rv.createdAt).toLocaleDateString("vi-VN") }}
-        </span>
+        <button class="btn btn-outline-primary" @click="openReviewModal" v-if="isLoggedIn">
+          <i class="bi bi-pencil-square me-1"></i> Viết đánh giá
+        </button>
+        <button class="btn btn-outline-danger" disabled v-else>🔒 Đăng nhập để đánh giá</button>
       </div>
 
-      <p class="mb-1">{{ rv.comment }}</p>
-
-      <!-- Ảnh đính kèm -->
-      <div v-if="rv.imageUrls?.length"
-           class="d-flex gap-2 flex-wrap mt-2">
-        <img v-for="(img, idx) in rv.imageUrls"
-             :key="idx"
-             :src="img"
-             @click="openZoom(img)"
-             class="rounded border"
-             style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;">
+      <div class="mb-3" v-if="reviews.averageRating">
+        <span class="fw-bold fs-5 text-warning">{{ reviews.averageRating.toFixed(1) }} / 5 ⭐</span>
+        <p class="text-muted small mb-0">Dựa trên {{ reviews.total }} lượt đánh giá</p>
       </div>
+
+      <!-- LIST -->
+      <div v-if="reviews.data.length > 0">
+        <div v-for="rv in reviews.data" :key="rv.id" class="p-3 border rounded mb-3 bg-white shadow-sm">
+          <div class="d-flex align-items-center mb-1">
+            <strong class="me-2">{{ rv.userName || "Người dùng" }}</strong>
+
+            <span v-for="i in 5" :key="i">
+              <i class="bi" :class="i <= rv.rating ? 'bi-star-fill text-warning' : 'bi-star text-muted'"></i>
+            </span>
+
+            <span class="text-muted small ms-2">
+              {{ new Date(rv.createdAt).toLocaleDateString("vi-VN") }}
+            </span>
+          </div>
+
+          <p class="mb-1">{{ rv.comment }}</p>
+
+          <div v-if="rv.imageUrls?.length" class="d-flex gap-2 flex-wrap mt-2">
+            <img
+              v-for="(img, idx) in rv.imageUrls"
+              :key="idx"
+              :src="img"
+              @click="openZoom(img)"
+              class="rounded border"
+              style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;"
+            />
+          </div>
+        </div>
+      </div>
+
+      <p v-else class="text-muted fst-italic">Hiện chưa có đánh giá nào.</p>
     </div>
-  </div>
-
-  <p v-else class="text-muted fst-italic">
-    Hiện chưa có đánh giá cho sản phẩm này. Hãy là người đầu tiên!
-  </p>
-</div>
 
     <!-- Sản phẩm tương tự -->
     <div class="mt-5">
       <h4 class="fw-semibold mb-3 text-primary">🔁 Sản phẩm tương tự</h4>
       <div class="row g-4">
-        <div
-          class="col-lg-3 col-md-4 col-sm-6"
-          v-for="p in relatedProducts"
-          :key="p.idProduct"
-        >
+        <div class="col-lg-3 col-md-4 col-sm-6" v-for="p in relatedProducts" :key="p.idProduct">
           <div class="product-card card h-100 shadow-sm">
             <div class="image-wrapper">
               <img
@@ -225,9 +179,9 @@
                 <div class="d-grid gap-2">
                   <router-link
                     :to="`/products/${p.idProduct}`"
-                    class="btn btn-outline-primary btn-sm w-100"
+                    class="btn btn-outline-primary btn-sm"
                   >
-                    Chi tiết
+                    Xem chi tiết
                   </router-link>
                   <button
                     v-if="!p.isRental"
@@ -241,7 +195,7 @@
                     class="btn btn-primary btn-sm w-100"
                     @click="createRentalSimilar(p)"
                   >
-                    <i class="bi bi-box-seam me-1"></i> Thuê
+                    <i class="bi bi-box-seam me-1"></i> Thuê thiết bị
                   </button>
                 </div>
               </div>
@@ -256,60 +210,85 @@
     </div>
   </div>
 
-  <!-- Modal Zoom ảnh -->
+  <!-- Zoom ảnh -->
   <div v-if="zoomImage" class="zoom-modal" @click="zoomImage = null">
     <img :src="zoomImage" alt="Zoom" class="zoomed-image" />
   </div>
 
   <!-- Loading -->
   <div v-else-if="isLoading" class="text-center mt-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2">Đang tải sản phẩm...</p>
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2">Đang tải...</p>
   </div>
 
-  <!-- Modal tạo review -->
-<div v-if="showReviewModal" class="modal-backdrop-custom">
-  <div class="modal-content-custom bg-white p-4 rounded shadow-lg">
-    <h5 class="fw-bold text-primary mb-3">Viết đánh giá</h5>
+  <!-- Modal Review -->
+  <div v-if="showReviewModal" class="modal-backdrop-custom">
+    <div class="modal-content-custom bg-white p-4 rounded shadow-lg">
+      <h5 class="fw-bold text-primary mb-3">Viết đánh giá</h5>
 
-    <!-- Rating -->
-    <div class="mb-3">
-      <label class="form-label fw-semibold small">Đánh giá *</label><br>
-      <span v-for="i in 5" :key="i"
-            @click="newReview.rating = i"
-            style="cursor: pointer;">
-        <i class="bi"
-           :class="i <= newReview.rating ? 'bi-star-fill text-warning fs-4' : 'bi-star fs-4 text-muted'"></i>
-      </span>
-    </div>
+      <!-- Cảnh báo trong modal -->
+      <div v-if="reviewAlert" class="alert alert-danger py-2 small">
+        {{ reviewAlert }}
+      </div>
 
-    <!-- Comment -->
-    <textarea
-      v-model="newReview.comment"
-      class="form-control mb-3"
-      rows="3"
-      placeholder="Chia sẻ cảm nhận của bạn..."
-    ></textarea>
+      <!-- Rating -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">Đánh giá *</label><br />
+        <span
+          v-for="i in 5"
+          :key="i"
+          @click="newReview.rating = i"
+          style="cursor: pointer;"
+        >
+          <i
+            class="bi"
+            :class="i <= newReview.rating ? 'bi-star-fill text-warning fs-4' : 'bi-star fs-4 text-muted'"
+          ></i>
+        </span>
+      </div>
 
-    <div class="text-end">
-      <button class="btn btn-secondary me-2" @click="closeReviewModal">Hủy</button>
-      <button class="btn btn-primary" @click="submitReview">
-        <i class="bi bi-check-circle me-1"></i> Gửi đánh giá
-      </button>
+      <!-- Comment -->
+      <textarea
+        v-model="newReview.comment"
+        class="form-control mb-3"
+        rows="3"
+        placeholder="Chia sẻ cảm nhận của bạn..."
+      ></textarea>
+
+      <div class="text-end">
+        <button class="btn btn-secondary me-2" @click="closeReviewModal">Hủy</button>
+        <button class="btn btn-primary" @click="submitReview">
+          <i class="bi bi-check-circle me-1"></i> Gửi đánh giá
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
+  <!-- Toast Popup góc phải -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 3000;">
+    <div
+      v-for="(t, index) in toasts"
+      :key="index"
+      class="toast align-items-center text-white border-0 show mb-2"
+      :class="t.type === 'success' ? 'bg-success' : 'bg-danger'"
+      role="alert"
+    >
+      <div class="d-flex">
+        <div class="toast-body">{{ t.message }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="removeToast(index)"></button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
 import rentalService from "@/services/rentalService";
-import defaultImage from "@/assets/no-image.png";
 import reviewService from "@/services/reviewService";
+import defaultImage from "@/assets/no-image.png";
 
 const backendUrl = "https://localhost:44303";
 const route = useRoute();
@@ -320,12 +299,11 @@ const relatedProducts = ref([]);
 const galleryImages = ref([]);
 const currentImageUrl = ref(defaultImage);
 const zoomImage = ref(null);
-const alertMessage = ref("");
-const alertType = ref("success");
+
 const isLoading = ref(true);
-const adding = ref({});
-const creating = ref({});
 const categories = ref([]);
+
+const isLoggedIn = !!localStorage.getItem("token");
 
 const reviews = ref({
   success: false,
@@ -333,22 +311,22 @@ const reviews = ref({
   total: 0,
   averageRating: 0,
 });
-const showReviewModal = ref(false);
 
-const newReview = ref({
-  rating: 0,
-  comment: "",
-  imageUrls: [],
-});
+/* TOAST */
+const toasts = ref([]);
 
-const isLoggedIn = !!localStorage.getItem("token");
-
-function showAlert(msg, type = "success") {
-  alertMessage.value = msg;
-  alertType.value = type;
-  setTimeout(() => (alertMessage.value = ""), 3000);
+function showToast(message, type = "success") {
+  toasts.value.push({ message, type });
+  setTimeout(() => {
+    toasts.value.shift();
+  }, 3000);
 }
 
+function removeToast(i) {
+  toasts.value.splice(i, 1);
+}
+
+/* IMAGE */
 function getImageUrl(path) {
   if (!path) return defaultImage;
   return path.startsWith("http")
@@ -373,18 +351,15 @@ function openZoom(url) {
   zoomImage.value = url;
 }
 
-function openReviewModal() {
-  if (!isLoggedIn) {
-    router.push("/login");
-    return;
-  }
-  showReviewModal.value = true;
-}
+/* REVIEW */
+const showReviewModal = ref(false);
+const reviewAlert = ref("");
 
-function closeReviewModal() {
-  showReviewModal.value = false;
-  newReview.value = { rating: 0, comment: "", imageUrls: [] };
-}
+const newReview = ref({
+  rating: 0,
+  comment: "",
+  imageUrls: [],
+});
 
 function normalizeReviewsPayload(payload) {
   if (!payload)
@@ -420,14 +395,27 @@ async function loadReviews() {
     if (!product.value) return;
     const res = await reviewService.getProductReviews(product.value.idProduct);
     reviews.value = normalizeReviewsPayload(res);
-  } catch (err) {
-    console.error("Load reviews failed:", err);
+  } catch {
+    console.error("Load reviews failed");
   }
 }
 
+function openReviewModal() {
+  reviewAlert.value = "";
+  newReview.value = { rating: 0, comment: "", imageUrls: [] };
+  showReviewModal.value = true;
+}
+
+function closeReviewModal() {
+  showReviewModal.value = false;
+  reviewAlert.value = "";
+}
+
 async function submitReview() {
+  reviewAlert.value = "";
+
   if (!product.value) {
-    showAlert("Sản phẩm chưa sẵn sàng!", "danger");
+    reviewAlert.value = "Sản phẩm chưa sẵn sàng!";
     return;
   }
 
@@ -435,11 +423,12 @@ async function submitReview() {
   const comment = newReview.value.comment?.trim();
 
   if (rating < 1 || rating > 5) {
-    showAlert("Chọn số sao từ 1 đến 5!", "danger");
+    reviewAlert.value = "Bạn phải chọn số sao từ 1 đến 5!";
     return;
   }
+
   if (!comment || comment.length < 10) {
-    showAlert("Nội dung phải từ 10 ký tự!", "danger");
+    reviewAlert.value = "Nội dung đánh giá phải từ 10 ký tự!";
     return;
   }
 
@@ -453,6 +442,7 @@ async function submitReview() {
   try {
     const res = await reviewService.createReview(dto);
     const created = res?.data ?? res;
+
     const imgs = Array.isArray(created.imageUrls)
       ? created.imageUrls
       : created.imageUrls
@@ -470,74 +460,65 @@ async function submitReview() {
       (reviews.value.averageRating * (reviews.value.total - 1) + rating) /
       reviews.value.total;
 
-    showAlert("Đánh giá thành công!");
+    showToast("Gửi đánh giá thành công!");
     closeReviewModal();
   } catch (err) {
-    const msg =
+    reviewAlert.value =
       err?.errors?.Comment?.[0] ||
       err?.title ||
       "Gửi đánh giá thất bại!";
-    showAlert(msg, "danger");
   }
 }
 
+/* CART + RENTAL */
 async function addToCart() {
   if (!isLoggedIn) return router.push("/login");
   await cartApi.addItem(product.value.idProduct, 1);
-  showAlert("Đã thêm vào giỏ!");
+  showToast("Đã thêm vào giỏ hàng!");
 }
 
 async function createRental() {
   if (!isLoggedIn) return router.push("/login");
-  creating.value[product.value.idProduct] = true;
-  try {
-    const startDate = new Date().toISOString();
-    const endDate = new Date(Date.now() + 7 * 86400000).toISOString();
-    await rentalService.createRental({
-      productId: product.value.idProduct,
-      quantity: 1,
-      startDate,
-      endDate,
-    });
-    showAlert("Tạo đơn thuê thành công!");
-  } finally {
-    creating.value[product.value.idProduct] = false;
-  }
+  await rentalService.createRental({
+    productId: product.value.idProduct,
+    quantity: 1,
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+  });
+  showToast("Tạo đơn thuê thành công!");
 }
 
 async function addToCartSimilar(id) {
   if (!isLoggedIn) return router.push("/login");
   await cartApi.addItem(id, 1);
-  showAlert("Đã thêm vào giỏ!");
+  showToast("Đã thêm vào giỏ!");
 }
 
 async function createRentalSimilar(p) {
   if (!isLoggedIn) return router.push("/login");
-  creating.value[p.idProduct] = true;
-  try {
-    const startDate = new Date().toISOString();
-    const endDate = new Date(Date.now() + 7 * 86400000).toISOString();
-    await rentalService.createRental({
-      productId: p.idProduct,
-      quantity: 1,
-      startDate,
-      endDate,
-    });
-    showAlert("Đã tạo đơn thuê!");
-  } finally {
-    creating.value[p.idProduct] = false;
-  }
+  await rentalService.createRental({
+    productId: p.idProduct,
+    quantity: 1,
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+  });
+  showToast("Đã tạo đơn thuê!");
 }
 
-onMounted(async () => {
-  const id = route.params.id;
+/* LOAD DATA */
+async function loadProductDetails(id) {
+  isLoading.value = true;
+  product.value = null;
+
   try {
     const res = await api.get(`/Product/${id}`);
     product.value = res.data;
+
     galleryImages.value =
       product.value.images?.length > 0
         ? product.value.images
         : [product.value.image];
+
     currentImageUrl.value = getImageUrl(galleryImages.value[0]);
 
     const catRes = await api.get("/Category");
@@ -546,19 +527,34 @@ onMounted(async () => {
     const related = await api.get("/Product", {
       params: { categoryId: product.value.categoryId },
     });
+
     relatedProducts.value = related.data
       .filter((p) => p.idProduct !== Number(id))
       .slice(0, 4);
 
     await loadReviews();
+  } catch {
+    console.error("Failed to load product");
   } finally {
     isLoading.value = false;
   }
+}
+
+onMounted(async () => {
+  await loadProductDetails(route.params.id);
 });
+
+/* KEY FIX: Reload khi ID thay đổi */
+watch(
+  () => route.params.id,
+  async (newId) => {
+    await loadProductDetails(newId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+);
 </script>
 
 <style scoped>
-/* Sử dụng lại style từ ProductCard cho sản phẩm tương tự */
 .product-card {
   background-color: #ffffff;
   border: 1px solid #dee2e6;
@@ -588,15 +584,14 @@ onMounted(async () => {
 .image-wrapper:hover img {
   transform: scale(1.05);
 }
-.product-name {
-  font-weight: 600;
-  color: #212529;
-  margin-bottom: 0.25rem;
-}
+
 .modal-backdrop-custom {
-  position: fixed; inset: 0;
-  display: flex; justify-content: center; align-items: center;
-  background: rgba(0,0,0,0.45);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
   z-index: 2000;
 }
 
@@ -604,5 +599,4 @@ onMounted(async () => {
   width: 400px;
   max-width: 90%;
 }
-
 </style>

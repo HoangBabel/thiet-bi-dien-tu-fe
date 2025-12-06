@@ -15,6 +15,7 @@
         <button class="btn btn-gradient" @click="applyFilters">Tìm</button>
       </div>
 
+      <!-- Lọc trạng thái -->
       <div class="ms-auto">
         <select v-model="statusFilter" class="form-select shadow-sm" style="width: 200px;" @change="applyFilters">
           <option value="">Tất cả trạng thái</option>
@@ -33,7 +34,7 @@
         <thead class="table-dark">
           <tr>
             <th>#</th>
-            <th>Mã Voucher</th>
+            <th>Mã</th>
             <th>Loại</th>
             <th>Giá trị</th>
             <th>Hết hạn</th>
@@ -47,33 +48,39 @@
         <tbody>
           <tr v-for="(v, i) in pagedVouchers" :key="v.id">
             <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
-            <td class="fw-bold">{{ v.code }}</td>
+            <td>{{ v.code }}</td>
 
             <td>{{ typeLabel(v.type) }}</td>
 
             <td>
-              <template v-if="v.type === 'Percent'">
-                {{ v.discountPercent }}%
-              </template>
-
-              <template v-else-if="v.type === 'Fixed'">
+              <template v-if="v.type === 'Fixed'">
                 {{ formatPrice(v.discountValue) }}
               </template>
 
-              <template v-else>
-                <span class="badge bg-info">Free Ship</span>
+              <template v-else-if="v.type === 'Percent'">
+                {{ v.discountPercent }}%
+                <div class="text-muted small">
+                  Tối đa: {{ formatPrice(v.maximumDiscount) }}
+                </div>
+              </template>
+
+              <template v-else-if="v.type === 'Shipping'">
+                <span class="badge bg-info">
+                  {{ v.shippingDiscountPercent === null ? "Free Ship 100%" : "Giảm " + v.shippingDiscountPercent + "% Ship" }}
+                </span>
               </template>
             </td>
 
             <td>{{ formatDate(v.expirationDate) }}</td>
+
             <td>{{ formatPrice(v.minimumOrderValue) }}</td>
 
-            <td>
-              {{ v.currentUsageCount }}/{{ v.maxUsageCount }}
-            </td>
+            <td>{{ v.currentUsageCount }}/{{ v.maxUsageCount }}</td>
 
             <td>
-              <span :class="statusClass(v)">{{ statusLabel(v) }}</span>
+              <span :class="statusClass(v)">
+                {{ statusLabel(v) }}
+              </span>
             </td>
 
             <td>
@@ -83,9 +90,7 @@
           </tr>
 
           <tr v-if="pagedVouchers.length === 0">
-            <td colspan="9" class="text-center text-muted py-3">
-              Không có voucher phù hợp.
-            </td>
+            <td colspan="9" class="text-center text-muted py-3">Không có voucher phù hợp.</td>
           </tr>
         </tbody>
       </table>
@@ -115,7 +120,7 @@
       </ul>
     </nav>
 
-    <!-- 🧩 Modal thêm/sửa voucher -->
+    <!-- 🧩 Modal -->
     <div class="modal fade" id="voucherModal" tabindex="-1" ref="modalRef">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -128,20 +133,23 @@
             <div class="modal-body">
               <div class="row g-3">
 
+                <!-- Mã -->
                 <div class="col-md-6">
                   <label class="form-label">Mã Voucher</label>
-                  <input v-model="form.code" class="form-control" required />
+                  <input v-model="form.code" class="form-control" required maxlength="50" />
                 </div>
 
+                <!-- Type -->
                 <div class="col-md-6">
                   <label class="form-label">Loại Voucher</label>
                   <select v-model="form.type" class="form-select">
                     <option value="Fixed">Giảm cố định</option>
                     <option value="Percent">Giảm %</option>
-                    <option value="Shipping">Free Ship</option>
+                    <option value="Shipping">Miễn/giảm Ship</option>
                   </select>
                 </div>
 
+                <!-- Value -->
                 <div class="col-md-6" v-if="form.type === 'Fixed'">
                   <label class="form-label">Số tiền giảm (₫)</label>
                   <input type="number" class="form-control" v-model.number="form.discountValue" />
@@ -152,21 +160,30 @@
                   <input type="number" class="form-control" v-model.number="form.discountPercent" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-6" v-if="form.type === 'Percent'">
                   <label class="form-label">Giảm tối đa</label>
                   <input type="number" class="form-control" v-model.number="form.maximumDiscount" />
                 </div>
 
+                <!-- Shipping Percent -->
+                <div class="col-md-6" v-if="form.type === 'Shipping'">
+                  <label class="form-label">% giảm phí ship</label>
+                  <input type="number" class="form-control" v-model.number="form.shippingDiscountPercent" placeholder="Để trống = Free Ship 100%" />
+                </div>
+
+                <!-- Min order -->
                 <div class="col-md-6">
-                  <label class="form-label">Đơn tối thiểu</label>
+                  <label class="form-label">Đơn tối thiểu (₫)</label>
                   <input type="number" class="form-control" v-model.number="form.minimumOrderValue" />
                 </div>
 
+                <!-- Expiration -->
                 <div class="col-md-6">
                   <label class="form-label">Ngày hết hạn</label>
                   <input type="date" class="form-control" v-model="form.expirationDate" />
                 </div>
 
+                <!-- Apply To Shipping -->
                 <div class="col-md-6">
                   <label class="form-label">Áp dụng cho ship?</label>
                   <select class="form-select" v-model="form.applyToShipping">
@@ -175,11 +192,13 @@
                   </select>
                 </div>
 
+                <!-- Usage -->
                 <div class="col-md-6">
-                  <label class="form-label">Số lượt sử dụng tối đa</label>
+                  <label class="form-label">Lượt sử dụng tối đa</label>
                   <input type="number" class="form-control" v-model.number="form.maxUsageCount" />
                 </div>
 
+                <!-- Status -->
                 <div class="col-md-6">
                   <label class="form-label">Kích hoạt</label>
                   <select class="form-select" v-model="form.isValid">
@@ -209,9 +228,9 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { Modal } from "bootstrap";
 import VoucherService from "@/services/VoucherService";
 
-/* ============================================================
+/* =======================================
    STATE
-============================================================ */
+======================================= */
 const vouchers = ref([]);
 const search = ref("");
 const statusFilter = ref("");
@@ -229,6 +248,7 @@ const form = reactive({
   discountValue: null,
   discountPercent: null,
   maximumDiscount: null,
+  shippingDiscountPercent: null,
   minimumOrderValue: 0,
   expirationDate: "",
   applyToShipping: false,
@@ -237,18 +257,17 @@ const form = reactive({
   isValid: true,
 });
 
-/* ============================================================
+/* =======================================
    HELPERS
-============================================================ */
+======================================= */
 function typeLabel(t) {
   if (t === "Fixed") return "Giảm cố định";
   if (t === "Percent") return "Giảm theo %";
-  return "Miễn phí ship";
+  return "Giảm/Miễn ship";
 }
 
 function formatPrice(v) {
-  if (!v) return "0 ₫";
-  return v.toLocaleString("vi-VN") + " ₫";
+  return (v || 0).toLocaleString("vi-VN") + " ₫";
 }
 
 function formatDate(d) {
@@ -269,9 +288,9 @@ function statusClass(v) {
   return "badge bg-success";
 }
 
-/* ============================================================
+/* =======================================
    FILTER + PAGINATION
-============================================================ */
+======================================= */
 const filteredVouchers = computed(() => {
   let list = vouchers.value;
 
@@ -318,9 +337,9 @@ function applyFilters() {
   currentPage.value = 1;
 }
 
-/* ============================================================
+/* =======================================
    API
-============================================================ */
+======================================= */
 async function loadVouchers() {
   try {
     vouchers.value = await VoucherService.getAll();
@@ -329,9 +348,9 @@ async function loadVouchers() {
   }
 }
 
-/* ============================================================
+/* =======================================
    FORM
-============================================================ */
+======================================= */
 function openForm(v = null) {
   if (v) {
     Object.assign(form, {
@@ -341,6 +360,7 @@ function openForm(v = null) {
       discountValue: v.discountValue,
       discountPercent: v.discountPercent,
       maximumDiscount: v.maximumDiscount,
+      shippingDiscountPercent: v.shippingDiscountPercent,
       minimumOrderValue: v.minimumOrderValue,
       expirationDate: v.expirationDate.split("T")[0],
       applyToShipping: v.applyToShipping,
@@ -356,6 +376,7 @@ function openForm(v = null) {
       discountValue: null,
       discountPercent: null,
       maximumDiscount: null,
+      shippingDiscountPercent: null,
       minimumOrderValue: 0,
       expirationDate: "",
       applyToShipping: false,
@@ -371,25 +392,41 @@ function openForm(v = null) {
 
 async function saveVoucher() {
   try {
-    const dto = {
-      id: form.id || 0,
-      code: form.code.trim(),
-      type: form.type,
-      discountValue: form.type === "Fixed" ? form.discountValue : null,
-      discountPercent: form.type === "Percent" ? form.discountPercent : null,
-      maximumDiscount: form.maximumDiscount,
-      minimumOrderValue: form.minimumOrderValue,
-      expirationDate: new Date(form.expirationDate).toISOString(),
-      applyToShipping: form.applyToShipping,
-      maxUsageCount: form.maxUsageCount,
-      currentUsageCount: form.currentUsageCount,
-      isValid: form.isValid,
-    };
+    const dto =
+      form.id === null
+        ? {
+            // CREATE DTO
+            code: form.code,
+            type: form.type,
+            discountValue: form.type === "Fixed" ? form.discountValue : null,
+            discountPercent: form.type === "Percent" ? form.discountPercent : null,
+            shippingDiscountPercent:
+              form.type === "Shipping" ? form.shippingDiscountPercent : null,
+            maximumDiscount: form.maximumDiscount,
+            minimumOrderValue: form.minimumOrderValue,
+            expirationDate: new Date(form.expirationDate),
+            maxUsageCount: form.maxUsageCount,
+          }
+        : {
+            // UPDATE DTO
+            code: form.code,
+            type: form.type,
+            discountValue: form.type === "Fixed" ? form.discountValue : null,
+            discountPercent: form.type === "Percent" ? form.discountPercent : null,
+            shippingDiscountPercent:
+              form.type === "Shipping" ? form.shippingDiscountPercent : null,
+            maximumDiscount: form.maximumDiscount,
+            minimumOrderValue: form.minimumOrderValue,
+            expirationDate: new Date(form.expirationDate),
+            maxUsageCount: form.maxUsageCount,
+            isValid: form.isValid,
+          };
 
-    if (form.id)
+    if (form.id) {
       await VoucherService.update(form.id, dto);
-    else
+    } else {
       await VoucherService.create(dto);
+    }
 
     modalInstance.hide();
     await loadVouchers();
