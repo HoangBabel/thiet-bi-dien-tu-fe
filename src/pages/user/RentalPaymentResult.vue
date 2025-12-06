@@ -29,7 +29,7 @@
         <i class="bi bi-hourglass-split display-3 text-warning icon-pending"></i>
         <h4 class="mt-3 fw-bold">Thanh toán chưa hoàn tất</h4>
         <p class="text-muted">Đơn thuê #{{ rentalId }} đang chờ thanh toán.</p>
-        <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(rental.finalAmount) }}</p>
+        <!-- <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(rental.finalAmount) }}</p> -->
 
         <!-- QR / Link -->
         <div v-if="rental.paymentUrl || rental.qrCodeUrl" class="mt-3 qr-container">
