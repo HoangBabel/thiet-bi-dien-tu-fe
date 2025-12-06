@@ -139,7 +139,7 @@ let intervalId = null;
     FILTERED RENTALS (Không hiển thị Pending)
 ============================= */
 const rentalsFiltered = computed(() =>
-  rentals.value.filter(r => r.status !== "Unpaid")
+  rentals.value.filter(r => r.paymentStatus !== "UNPAID")
 );
 
 /* =============================

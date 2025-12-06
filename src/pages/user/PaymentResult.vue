@@ -21,7 +21,7 @@
         <i class="bi bi-check-circle-fill display-3 text-success"></i>
         <h4 class="mt-3 fw-bold">Thanh toán thành công!</h4>
         <p class="text-muted">Đơn hàng #{{ order.id }} đã được xác nhận.</p>
-        <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(order.finalAmount) }}</p>
+        <!-- <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(order.finalAmount) }}</p> -->
       </div>
 
       <!-- Chưa thanh toán -->

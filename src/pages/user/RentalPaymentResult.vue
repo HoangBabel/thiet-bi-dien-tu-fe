@@ -21,7 +21,7 @@
         <i class="bi bi-check-circle-fill display-3 text-success"></i>
         <h4 class="mt-3 fw-bold">Thanh toán thành công!</h4>
         <p class="text-muted">Đơn thuê #{{ rentalId }} đã được xác nhận.</p>
-        <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(rental.finalAmount) }}</p>
+        <!-- <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(rental.finalAmount) }}</p> -->
       </div>
 
       <!-- Chưa thanh toán -->
@@ -29,10 +29,7 @@
         <i class="bi bi-hourglass-split display-3 text-warning icon-pending"></i>
         <h4 class="mt-3 fw-bold">Thanh toán chưa hoàn tất</h4>
         <p class="text-muted">Đơn thuê #{{ rentalId }} đang chờ thanh toán.</p>
-        <p class="fw-semibold">
-          Tổng thanh toán: <span class="text-danger">{{ formatCurrency(finalAmount.value) }}</span>
-        </p>
-
+        <p class="fw-semibold">Tổng thanh toán: {{ formatCurrency(rental.finalAmount) }}</p>
 
         <!-- QR / Link -->
         <div v-if="rental.paymentUrl || rental.qrCodeUrl" class="mt-3 qr-container">
@@ -83,20 +80,6 @@ const error = ref(null);
 const rental = ref({});
 const isPaid = ref(false);
 const showSuccess = ref(false);
-const finalAmount = computed(() => {
-  if (!rental.value) return 0;
-
-  // Ưu tiên giá trị backend mới nhất nếu có
-  if (rental.value.finalAmount > 0) return rental.value.finalAmount;
-  if (rental.value.totalAmount > 0) return rental.value.totalAmount;
-  if (rental.value.finalPayableAmount > 0) return rental.value.finalPayableAmount;
-
-  // Fallback nếu API chỉ trả totalPrice + depositPaid
-  const total = rental.value.totalPrice || 0;
-  const deposit = rental.value.depositPaid || 0;
-
-  return Math.max(total - deposit, 0);
-});
 let stopPolling = null;
 
 let rentalId = ref(null);
