@@ -164,18 +164,24 @@ import rentalService from "@/services/RentalService";
 import rentalCheckoutService from "@/services/rentalCheckoutService";
 import locationService from "@/services/locationService";
 import shippingService from "@/services/shippingService";
+import VoucherService from "@/services/VoucherService";
 import { useAuthStore } from "@/stores/auth";
-
 import payosService from "@/services/payosService";
 
+// -----------------------
+// Init
+// -----------------------
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
 const rentalId = Number(route.query.rentalId || 0);
+
+// Rental data
 const rentalData = ref(null);
 const rentalItems = ref([]);
 
+// Checkout object
 const checkout = ref({
   ShippingAddress: "",
   PaymentMethod: "COD",
@@ -196,30 +202,48 @@ const wards = ref([]);
 const shippingOptions = ref([]);
 const serviceTypes = ref([]);
 
-// Voucher state
+// Voucher
 const voucherCode = ref("");
 const voucherDiscount = ref(0);
 const voucherSuccess = ref(null);
 const voucherError = ref(null);
 const loadingVoucher = ref(false);
 
+// UI state
 const loading = ref(false);
 const showSuccess = ref(false);
 
-// Computed values
+// -----------------------
+// Computed
+// -----------------------
+const itemsTotal = computed(() =>
+  rentalItems.value.reduce((s, i) => s + i.subTotal, 0)
+);
+
 const selectedShippingFee = computed(() => {
-  const opt = shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId);
+  const opt = shippingOptions.value.find(
+    s => s.service_id === checkout.value.ServiceId
+  );
   return opt ? opt.shipping_fee : 0;
 });
 
+// Tổng cuối (đã trừ voucher)
 const finalTotalWithDeposit = computed(() => {
-  const itemsTotal = rentalItems.value.reduce((s, i) => s + i.subTotal, 0);
   const deposit = rentalData.value?.depositPaid || 0;
-  return itemsTotal + selectedShippingFee.value - voucherDiscount.value + deposit;
+  return (
+    itemsTotal.value +
+    selectedShippingFee.value -
+    voucherDiscount.value +
+    deposit
+  );
 });
 
+// Format tiền
 function formatCurrency(v) {
-  return v?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫";
+  return v?.toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND"
+  });
 }
 
 function getShippingFeeById(id) {
@@ -227,95 +251,135 @@ function getShippingFeeById(id) {
   return opt ? opt.shipping_fee : 0;
 }
 
-// Load rental data
+// -----------------------
+// Load rental
+// -----------------------
 async function loadRentalData() {
   try {
     const data = await rentalService.getRentalById(rentalId);
     rentalData.value = data;
+
     rentalItems.value = data.items.map(i => ({
       ...i,
       subTotal: i.pricePerUnitAtBooking * i.quantity * i.units
     }));
-  } catch (e) { console.error(e); }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
+// -----------------------
 // Location
-async function loadProvinces() { provinces.value = await locationService.getProvinces(); }
-async function loadDistricts(id) { districts.value = await locationService.getDistricts(id); }
-async function loadWards(id) { wards.value = await locationService.getWards(id); }
+// -----------------------
+async function loadProvinces() {
+  provinces.value = await locationService.getProvinces();
+}
+
+async function loadDistricts(id) {
+  districts.value = await locationService.getDistricts(id);
+}
+
+async function loadWards(id) {
+  wards.value = await locationService.getWards(id);
+}
 
 function onProvinceChange() {
   checkout.value.ToDistrictId = null;
   checkout.value.ToWardCode = "";
   districts.value = [];
   wards.value = [];
+
   loadDistricts(checkout.value.ToProvinceId);
 }
 
 function onDistrictChange() {
   checkout.value.ToWardCode = "";
   wards.value = [];
+
   loadWards(checkout.value.ToDistrictId);
 }
 
+// -----------------------
 // Recalculate shipping
+// -----------------------
 watch(
-  [() => checkout.value.ToDistrictId, () => checkout.value.ToWardCode, () => checkout.value.Weight],
+  [
+    () => checkout.value.ToDistrictId,
+    () => checkout.value.ToWardCode,
+    () => checkout.value.Weight
+  ],
   async () => {
     if (!checkout.value.ToDistrictId || !checkout.value.ToWardCode) return;
+
     try {
       shippingOptions.value = await shippingService.calculateShipping({
         to_district_id: checkout.value.ToDistrictId,
         to_ward_code: checkout.value.ToWardCode,
         weight: checkout.value.Weight
       });
-      serviceTypes.value = shippingOptions.value.map(s => ({ service_id: s.service_id, service_type: s.service_type }));
+
+      serviceTypes.value = shippingOptions.value.map(s => ({
+        service_id: s.service_id,
+        service_type: s.service_type
+      }));
+
       if (!shippingOptions.value.find(s => s.service_id === checkout.value.ServiceId)) {
         checkout.value.ServiceId = shippingOptions.value[0]?.service_id || null;
       }
-    } catch(e) {
+    } catch (err) {
+      console.error(err);
       shippingOptions.value = [];
       serviceTypes.value = [];
-      console.error(e);
     }
   }
 );
 
-// Voucher
+// -----------------------
+// Voucher: VALIDATE
+// -----------------------
 async function applyVoucherCode() {
   if (!voucherCode.value.trim()) {
     voucherError.value = "Vui lòng nhập mã giảm giá.";
     return;
   }
+
   voucherError.value = null;
   voucherSuccess.value = null;
+  voucherDiscount.value = 0;
   loadingVoucher.value = true;
 
   try {
-    const result = await rentalCheckoutService.validateVoucher({
-      rentalId,
-      code: voucherCode.value.trim()
-    });
-    voucherDiscount.value = result.discount || 0;
-    voucherSuccess.value = result.code || null;
-  } catch (e) {
-    voucherError.value = "Mã không hợp lệ hoặc đã hết hạn.";
-    voucherDiscount.value = 0;
-    voucherSuccess.value = null;
+    const result = await VoucherService.validate(
+      voucherCode.value.trim(),
+      itemsTotal.value,
+      selectedShippingFee.value
+    );
+
+    voucherDiscount.value = result.discountAmount || 0;
+    voucherSuccess.value = result.code;
+  } catch (err) {
+    voucherError.value =
+      err.response?.data?.message || "Mã voucher không hợp lệ hoặc đã hết hạn.";
   } finally {
     loadingVoucher.value = false;
   }
 }
 
-// Submit order
+// -----------------------
+// Submit Order
+// -----------------------
 async function submitOrder() {
   if (!authStore.isLoggedIn) {
     alert("Vui lòng đăng nhập.");
-    router.push("/login");
-    return;
+    return router.push("/login");
   }
 
-  if (!checkout.value.ShippingAddress || !checkout.value.ToProvinceId || !checkout.value.ToDistrictId || !checkout.value.ToWardCode) {
+  if (
+    !checkout.value.ShippingAddress ||
+    !checkout.value.ToProvinceId ||
+    !checkout.value.ToDistrictId ||
+    !checkout.value.ToWardCode
+  ) {
     alert("Vui lòng chọn đầy đủ địa chỉ giao hàng.");
     return;
   }
@@ -323,57 +387,93 @@ async function submitOrder() {
   loading.value = true;
 
   try {
+    // -----------------------
+    // APPLY VOUCHER TRƯỚC
+    // -----------------------
+    let appliedVoucherCode = null;
+
+    if (voucherSuccess.value) {
+      try {
+        const applyResult = await VoucherService.apply(
+          voucherSuccess.value,
+          itemsTotal.value,
+          selectedShippingFee.value
+        );
+
+        appliedVoucherCode = applyResult.code;
+        voucherDiscount.value = applyResult.discountAmount;
+      } catch (err) {
+        alert("Voucher hiện không thể áp dụng khi thanh toán.");
+        return;
+      }
+    }
+
+    // -----------------------
+    // GỌI CHECKOUT
+    // -----------------------
     const payload = {
       RentalId: rentalId,
       ShippingAddress: checkout.value.ShippingAddress,
+
       ToProvinceId: checkout.value.ToProvinceId,
-      ToProvinceName: provinces.value.find(x => x.ProvinceID === checkout.value.ToProvinceId)?.ProvinceName,
+      ToProvinceName: provinces.value.find(p => p.ProvinceID === checkout.value.ToProvinceId)?.ProvinceName,
+
       ToDistrictId: checkout.value.ToDistrictId,
-      ToDistrictName: districts.value.find(x => x.DistrictID === checkout.value.ToDistrictId)?.DistrictName,
+      ToDistrictName: districts.value.find(d => d.DistrictID === checkout.value.ToDistrictId)?.DistrictName,
+
       ToWardCode: checkout.value.ToWardCode,
-      ToWardName: wards.value.find(x => x.WardCode === checkout.value.ToWardCode)?.WardName,
+      ToWardName: wards.value.find(w => w.WardCode === checkout.value.ToWardCode)?.WardName,
+
       ServiceId: checkout.value.ServiceId,
       Weight: checkout.value.Weight,
       Length: checkout.value.Length,
       Width: checkout.value.Width,
       Height: checkout.value.Height,
+
       PaymentMethod: checkout.value.PaymentMethod === "QR" ? 1 : 0,
-      VoucherCode: voucherCode.value.trim() || null
+      VoucherCode: appliedVoucherCode
     };
 
     const result = await rentalCheckoutService.checkoutRental(payload);
 
-    if (result.voucherCode) voucherSuccess.value = result.voucherCode;
-    voucherDiscount.value = result.discount || 0;
-
+    // -----------------------
+    // PAYOS (nếu có)
+    // -----------------------
     if (checkout.value.PaymentMethod === "QR") {
       let payResult;
+
       try {
         payResult = await payosService.createRentalPaymentLink(result.rentalId);
       } catch (err) {
         const data = err.response?.data;
+
         if (data?.message?.includes("Đã tồn tại link thanh toán")) {
           payResult = {
             message: data.message,
             rentalId: result.rentalId,
-            paymentUrl: data.paymentUrl || "",
-            qrCodeUrl: data.qrCodeUrl || "",
-            paymentLinkId: data.paymentLinkId || "",
+            paymentUrl: data.paymentUrl,
+            qrCodeUrl: data.qrCodeUrl,
+            paymentLinkId: data.paymentLinkId,
             status: data.status || "PENDING"
           };
         } else {
-          console.error("❌ Lỗi tạo PayOS link:", err);
-          alert("Lỗi khi tạo PayOS link: " + (data?.message || err.message));
+          alert("Lỗi tạo link PayOS: " + (data?.message || err.message));
           return;
         }
       }
 
-      const stopPolling = payosService.pollRentalPaymentStatus(result.rentalId, (status) => {
-        if (status.paymentStatus === "PAID") {
-          stopPolling();
-          showSuccess.value = true;
-        }
-      }, 5000, 60);
+      // Theo dõi kết quả thanh toán
+      const stopPolling = payosService.pollRentalPaymentStatus(
+        result.rentalId,
+        status => {
+          if (status.paymentStatus === "PAID") {
+            stopPolling();
+            showSuccess.value = true;
+          }
+        },
+        5000,
+        60
+      );
 
       router.push({
         path: "/rental-payment-result",
@@ -382,17 +482,25 @@ async function submitOrder() {
       return;
     }
 
+    // -----------------------
+    // COD → SUCCESS
+    // -----------------------
     showSuccess.value = true;
-
   } catch (err) {
-    console.error("❌ Lỗi khi thanh toán:", err);
-    const msg = err.response?.data?.message || err.response?.data?.error || err.message || "";
-    alert("Lỗi khi thanh toán: " + msg);
+    const msg =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.message ||
+      "Lỗi không xác định";
+    alert("Thanh toán thất bại: " + msg);
   } finally {
     loading.value = false;
   }
 }
 
+// -----------------------
+// Success → go to orders
+// -----------------------
 function goToOrders() {
   showSuccess.value = false;
   router.push("/rentalOrder");
@@ -411,8 +519,10 @@ onMounted(() => {
 .checkout-card, .order-summary { border-radius: 12px; overflow: hidden; background-color: #f9fafb; }
 .btn-success { background-color: #28a745; border: none; transition: 0.3s ease; }
 .btn-success:hover { background-color: #218838; transform: scale(1.02); }
-.popup-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.55); z-index: 1050; }
+.popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1050; }
 .popup-card { width: 380px; max-width: 90%; animation: zoomIn 0.4s ease; }
+
 @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 @keyframes zoomIn { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
 </style>
+
