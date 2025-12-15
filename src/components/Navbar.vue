@@ -49,30 +49,19 @@
           </li>
 
           <!-- Cart -->
-          <li class="nav-item position-relative">
-            <router-link to="/cart" class="nav-link" active-class="active">
-              <i class="bi bi-cart4 me-1"></i> Giỏ Hàng
-              <span
-                v-if="cartCount > 0"
-                class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle"
-              >
-                {{ cartCount }}
-              </span>
-            </router-link>
-          </li>
+<li v-if="isLoggedIn" class="nav-item position-relative">
+  <router-link to="/cart" class="nav-link">
+    <i class="bi bi-cart4 me-1"></i> Giỏ Hàng
+  </router-link>
+</li>
 
-          <!-- Rental Cart -->
-          <li class="nav-item position-relative">
-            <router-link to="/rentalcart" class="nav-link" active-class="active">
-              <i class="bi bi-cart4 me-1"></i> Giỏ Thuê
-              <span
-                v-if="cartCount > 0"
-                class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle"
-              >
-                {{ cartCount }}
-              </span>
-            </router-link>
-          </li>
+<!-- Rental Cart -->
+<li v-if="isLoggedIn" class="nav-item position-relative">
+  <router-link to="/rentalcart" class="nav-link">
+    <i class="bi bi-cart4 me-1"></i> Giỏ Thuê
+  </router-link>
+</li>
+
 
           <!-- Orders -->
           <li v-if="isLoggedIn" class="nav-item">

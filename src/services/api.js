@@ -146,6 +146,7 @@ export const USER_API = {
   SEND_RESET_CODE: "/user/send-reset-code",
   RESEND_RESET_CODE: "/user/resend-reset-code",
   RESET_PASSWORD: "/user/reset-password",
+  CHANGE_PASSWORD: "/user/change-password",
 };
 
 export default api;

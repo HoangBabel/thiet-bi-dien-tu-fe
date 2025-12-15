@@ -182,7 +182,7 @@ import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
-import rentalService from "@/services/rentalService";
+import rentalService from "@/services/dailyRentalService";
 import defaultImage from "@/assets/no-image.png";
 import { useRentalCartStore } from "@/stores/rentalCart";
 

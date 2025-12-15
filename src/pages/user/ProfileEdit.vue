@@ -117,13 +117,14 @@
                 <!-- Mật khẩu mới -->
                 <div class="form-floating mb-3 position-relative">
                   <input
-                    :type="showNewPassword ? 'text' : 'password'"
-                    v-model="form.password"
-                    class="form-control"
-                    id="passwordInput"
-                    placeholder="Mật khẩu mới"
-                    required
-                  />
+  :type="showNewPassword ? 'text' : 'password'"
+  v-model="form.newPassword"
+  class="form-control"
+  id="passwordInput"
+  placeholder="Mật khẩu mới"
+  required
+/>
+
                   <label for="passwordInput">Mật khẩu mới</label>
                   <i
                     class="bi"
@@ -188,10 +189,7 @@
 
               <div
                 v-if="twoFAStatus"
-                :class="[
-                  'alert text-center small mt-2',
-                  twoFAStatusType === 'success' ? 'alert-success' : 'alert-danger'
-                ]"
+                :class="[ 'alert text-center small mt-2', twoFAStatusType === 'success' ? 'alert-success' : 'alert-danger' ]"
               >
                 {{ twoFAStatus }}
               </div>
@@ -221,10 +219,7 @@
 
             <div
               v-if="message"
-              :class="[
-                'alert mt-3 text-center small',
-                messageType === 'success' ? 'alert-success' : 'alert-danger'
-              ]"
+              :class="[ 'alert mt-3 text-center small', messageType === 'success' ? 'alert-success' : 'alert-danger' ]"
             >
               {{ message }}
             </div>
@@ -235,66 +230,62 @@
 
     <!-- Modal nhập mật khẩu khi bật/tắt 2FA -->
     <div
-    class="modal fade"
-    id="passwordModal"
-    tabindex="-1"
-    aria-hidden="true"
-    ref="passwordModalEl">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content rounded-3 shadow">
-        <div class="modal-header">
-          <h5 class="modal-title fw-semibold">
-            {{ isEnabling2FA ? "Bật xác thực hai yếu tố" : "Tắt xác thực hai yếu tố" }}
-          </h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <p class="small text-muted">
-            Vui lòng nhập mật khẩu tài khoản để xác nhận hành động này.
-          </p>
+      class="modal fade"
+      id="passwordModal"
+      tabindex="-1"
+      aria-hidden="true"
+      ref="passwordModalEl"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-3 shadow">
+          <div class="modal-header">
+            <h5 class="modal-title fw-semibold">
+              {{ isEnabling2FA ? "Bật xác thực hai yếu tố" : "Tắt xác thực hai yếu tố" }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted">
+              Vui lòng nhập mật khẩu tài khoản để xác nhận hành động này.
+            </p>
 
-          <div class="position-relative">
-            <input
-              :type="showPassword2FA ? 'text' : 'password'"
-              v-model="passwordConfirm"
-              class="form-control"
-              placeholder="Nhập mật khẩu của bạn"
-              @keyup.enter="confirmToggle2FA"
-            />
-            <i
-              class="bi"
-              :class="showPassword2FA ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
-              @click="showPassword2FA = !showPassword2FA"
-              style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
-            ></i>
+            <div class="position-relative">
+              <input
+                :type="showPassword2FA ? 'text' : 'password'"
+                v-model="passwordConfirm"
+                class="form-control"
+                placeholder="Nhập mật khẩu của bạn"
+                @keyup.enter="confirmToggle2FA"
+              />
+              <i
+                class="bi"
+                :class="showPassword2FA ? 'bi-eye-slash-fill' : 'bi-eye-fill'"
+                @click="showPassword2FA = !showPassword2FA"
+                style="position:absolute; top:50%; right:12px; transform:translateY(-50%); cursor:pointer;"
+              ></i>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+              :disabled="loading2FA"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="confirmToggle2FA"
+              :disabled="loading2FA || !passwordConfirm"
+            >
+              <span v-if="loading2FA" class="spinner-border spinner-border-sm me-2"></span>
+              Xác nhận
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-            :disabled="loading2FA"
-          >
-            Hủy
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="confirmToggle2FA"
-            :disabled="loading2FA || !passwordConfirm"
-          >
-            <span v-if="loading2FA" class="spinner-border spinner-border-sm me-2"></span>
-            Xác nhận
-          </button>
-        </div>
       </div>
-    </div>
     </div>
 
   </div>
@@ -314,34 +305,28 @@ const user = computed(() => authStore.user || {});
 const loading = ref(false);
 const message = ref("");
 const messageType = ref("success");
-// Hiển thị mật khẩu cho modal 2FA
-const showPassword2FA = ref(false);
 
+const showPassword2FA = ref(false);
 const loading2FA = ref(false);
 const twoFAStatus = ref("");
 const twoFAStatusType = ref("success");
 const twoFAEnabled = ref(false);
 
-// Hiển thị form đổi mật khẩu
 const showPasswordForm = ref(false);
-
-// Hiển thị mật khẩu
 const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 
-// Form dữ liệu
 const form = ref({
   fullName: "",
   email: "",
   phoneNumber: "",
   address: "",
-  password: "",
-  confirmPassword: "",
   currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
 });
 
-// Avatar
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 const previewAvatar = ref(defaultAvatar);
 let newAvatarFile = null;
@@ -386,7 +371,10 @@ async function handleUpdate() {
       messageType.value = "danger";
       return;
     }
-    if (!form.value.password || form.value.password !== form.value.confirmPassword) {
+if (
+  !form.value.newPassword ||
+  form.value.newPassword !== form.value.confirmPassword
+) {
       message.value = "Mật khẩu mới và xác nhận không khớp.";
       messageType.value = "danger";
       return;
@@ -404,21 +392,24 @@ async function handleUpdate() {
       phoneNumber: form.value.phoneNumber,
       address: form.value.address,
     };
+    await userService.update(user.value.id, payload);
 
     if (showPasswordForm.value) {
-      payload.currentPassword = form.value.currentPassword;
-      payload.password = form.value.password;
+await userService.changePassword(
+  form.value.currentPassword,
+  form.value.newPassword,
+  form.value.confirmPassword
+);
     }
 
-    await userService.update(user.value.id, payload);
     await authStore.fetchCurrentUser();
 
     message.value = "Cập nhật hồ sơ thành công!";
     messageType.value = "success";
 
-    form.value.password = "";
-    form.value.confirmPassword = "";
-    form.value.currentPassword = "";
+form.value.currentPassword = "";
+form.value.newPassword = "";
+form.value.confirmPassword = "";
     showPasswordForm.value = false;
 
     setTimeout(() => router.push("/profile"), 1500);
@@ -431,9 +422,7 @@ async function handleUpdate() {
   }
 }
 
-/* =====================================================
-   🔐 BẬT / TẮT 2FA — CÓ XÁC NHẬN MẬT KHẨU
-===================================================== */
+// 2FA
 const passwordModalEl = ref(null);
 let passwordModal = null;
 const passwordConfirm = ref("");
@@ -474,22 +463,10 @@ async function confirmToggle2FA() {
 }
 </script>
 
-
 <style scoped>
-.card {
-  border-radius: 1rem;
-}
-img.rounded-circle {
-  object-fit: cover;
-  border: 3px solid #fff;
-}
-.btn-outline-secondary:hover {
-  background-color: #e9ecef;
-}
-.alert {
-  border-radius: 0.5rem;
-}
-.modal-content {
-  border-radius: 0.8rem;
-}
+.card { border-radius: 1rem; }
+img.rounded-circle { object-fit: cover; border: 3px solid #fff; }
+.btn-outline-secondary:hover { background-color: #e9ecef; }
+.alert { border-radius: 0.5rem; }
+.modal-content { border-radius: 0.8rem; }
 </style>

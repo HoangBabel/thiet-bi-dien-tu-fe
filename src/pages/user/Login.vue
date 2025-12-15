@@ -109,6 +109,24 @@ const authStore = useAuthStore();
 
 async function handleLogin() {
   error.value = "";
+
+  // ✅ Validate frontend
+  if (!email.value || !password.value) {
+    error.value = "Vui lòng nhập đầy đủ email và mật khẩu.";
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.value)) {
+    error.value = "Email không đúng định dạng.";
+    return;
+  }
+
+  if (password.value.length < 6) {
+    error.value = "Mật khẩu phải có ít nhất 6 ký tự.";
+    return;
+  }
+
   loading.value = true;
 
   try {
@@ -123,10 +141,20 @@ async function handleLogin() {
     await handleRedirect();
   } catch (err) {
     console.error("❌ Lỗi đăng nhập:", err);
-    error.value =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Không thể kết nối máy chủ.";
+
+    // ✅ Map lỗi từ backend
+    const status = err?.response?.status;
+    const message = err?.response?.data?.message;
+
+    if (status === 401) {
+      error.value = "Email hoặc mật khẩu không chính xác.";
+    } else if (status === 403) {
+      error.value = "Tài khoản đã bị khóa hoặc chưa được kích hoạt.";
+    } else if (status === 404) {
+      error.value = "Tài khoản không tồn tại.";
+    } else {
+      error.value = message || "Email hoặc mật khẩu không chính xác.";
+    }
   } finally {
     loading.value = false;
   }
@@ -136,6 +164,12 @@ async function handleVerify2FA(code) {
   verifying.value = true;
   error.value = "";
 
+  if (!code || code.length !== 6) {
+    error.value = "Mã xác thực phải gồm 6 chữ số.";
+    verifying.value = false;
+    return;
+  }
+
   try {
     const verified = await authStore.verify2FA(code);
 
@@ -144,11 +178,18 @@ async function handleVerify2FA(code) {
       pendingEmail.value = "";
       await handleRedirect();
     } else {
-      error.value = "Xác thực thất bại hoặc phản hồi không hợp lệ.";
+      error.value = "Mã xác thực không chính xác.";
     }
   } catch (err) {
     console.error("❌ Verify 2FA error:", err);
-    error.value = err?.response?.data?.message || "Mã xác thực không hợp lệ.";
+
+    const status = err?.response?.status;
+    if (status === 400) {
+      error.value = "Mã xác thực không hợp lệ hoặc đã hết hạn.";
+    } else {
+      error.value =
+        err?.response?.data?.message || "Xác thực 2FA thất bại.";
+    }
   } finally {
     verifying.value = false;
   }

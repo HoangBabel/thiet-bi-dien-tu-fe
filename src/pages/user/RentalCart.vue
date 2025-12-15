@@ -16,9 +16,7 @@
       class="empty-cart text-center p-5 rounded-4 shadow-sm bg-gradient"
     >
       <i class="bi bi-cart-x display-4 text-secondary"></i>
-      <p class="mt-3 fs-5 text-muted">
-        Chưa có đơn thuê nào trong giỏ.
-      </p>
+      <p class="mt-3 fs-5 text-muted">Chưa có đơn thuê nào trong giỏ.</p>
       <router-link to="/products" class="btn btn-primary mt-3 shadow-sm">
         <i class="bi bi-shop me-1"></i> Quay lại cửa hàng
       </router-link>
@@ -33,6 +31,9 @@
       >
         <!-- Table -->
         <div class="table-responsive mb-3" v-if="rental.items?.length">
+          <h5 class="fw-semibold text-dark mb-1">
+                🧾 Đơn thuê #{{ rental.id }}
+              </h5>
           <table class="table align-middle text-center mb-0">
             <thead class="table-header text-secondary">
               <tr>
@@ -63,25 +64,44 @@
         </div>
 
         <!-- Summary -->
-        <div class="cart-summary d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 px-3">
+        <div
+          class="cart-summary d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 px-3"
+        >
           <div class="text-start mb-3 mb-md-0">
             <p class="mb-1 fw-semibold">
-              Tổng tiền: <span class="text-danger">{{ formatCurrency(rental.totalPrice) }}</span>
+              Tổng tiền:
+              <span class="text-danger">{{
+                formatCurrency(rental.totalPrice)
+              }}</span>
             </p>
             <p v-if="rental.depositPaid" class="mb-0 fw-semibold">
-              Cọc đã thanh toán: <span class="text-warning">{{ formatCurrency(rental.depositPaid) }}</span>
+              Cọc đã thanh toán:
+              <span class="text-warning">{{
+                formatCurrency(rental.depositPaid)
+              }}</span>
             </p>
           </div>
 
           <!-- Buttons -->
           <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-2">
-            <button class="btn btn-outline-danger px-4" @click="clearCart(rental.id)">
+            <button
+              class="btn btn-outline-danger px-4"
+              @click="deleteRental(rental.id)"
+            >
               <i class="bi bi-trash3 me-1"></i> Xóa đơn
             </button>
-            <button class="btn btn-outline-primary px-4 shadow-sm" @click="openEditRentalModal(rental)">
+
+            <button
+              class="btn btn-outline-primary px-4 shadow-sm"
+              @click="openEditRentalModal(rental)"
+            >
               <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa ngày thuê
             </button>
-            <button class="btn btn-success px-4 shadow-sm" @click="proceedToCheckout(rental)">
+
+            <button
+              class="btn btn-success px-4 shadow-sm"
+              @click="proceedToCheckout(rental)"
+            >
               <i class="bi bi-cash-stack me-1"></i> Thanh toán đơn
             </button>
           </div>
@@ -99,7 +119,6 @@
     >
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-
           <div class="modal-header">
             <h5 class="modal-title fw-bold">✏️ Chỉnh sửa ngày thuê</h5>
             <button type="button" class="btn-close" @click="closeEditModal"></button>
@@ -109,21 +128,24 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Ngày bắt đầu</label>
-                <input type="date" v-model="editStartDate" class="form-control">
+                <input type="date" v-model="editStartDate" class="form-control" />
               </div>
 
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Ngày kết thúc</label>
-                <input type="date" v-model="editEndDate" class="form-control">
+                <input type="date" v-model="editEndDate" class="form-control" />
               </div>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeEditModal">Hủy</button>
-            <button class="btn btn-primary" @click="saveEditDates">Lưu thay đổi</button>
+            <button class="btn btn-secondary" @click="closeEditModal">
+              Hủy
+            </button>
+            <button class="btn btn-primary" @click="saveEditDates">
+              Lưu thay đổi
+            </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -135,7 +157,7 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import rentalService from "@/services/RentalService"
+import rentalService from "@/services/dailyRentalService"
 
 const rentals = ref([])
 const loading = ref(true)
@@ -146,14 +168,15 @@ const editStartDate = ref("")
 const editEndDate = ref("")
 const showEditModal = ref(false)
 
-/* ============= FORMATTER ============= */
+/* FORMATTERS */
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString("vi-VN") : "Không xác định"
 }
 
 function formatCurrency(value) {
   return (
-    value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) || "0₫"
+    value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }) ||
+    "0₫"
   )
 }
 
@@ -162,29 +185,26 @@ function formatDateForInput(dateStr) {
   return new Date(dateStr).toISOString().split("T")[0]
 }
 
-/* ============= TÍNH NGÀY THUÊ ============= */
+/* TÍNH SỐ NGÀY */
 function computeRentalDays(rental) {
   const start = new Date(rental.startDate)
   const end = new Date(rental.endDate)
-  const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
-  rental.rentalDays = diff > 0 ? diff : 1
-  return rental.rentalDays
+  const diff = Math.ceil((end - start) / 86400000)
+  return diff > 0 ? diff : 1
 }
 
-/* ============= LOAD RENTALS ============= */
+/* LOAD RENTALS */
 async function loadRentals() {
   loading.value = true
   try {
     const data = await rentalService.getMyRentals()
-    // Chỉ hiện đơn thuê chưa thanh toán
     rentals.value = (data || []).filter(r => r.paymentStatus === "UNPAID")
   } finally {
     loading.value = false
   }
 }
 
-
-/* ============= OPEN / CLOSE MODAL ============= */
+/* OPEN / CLOSE MODAL */
 function openEditRentalModal(rental) {
   editingRental.value = rental
   editStartDate.value = formatDateForInput(rental.startDate)
@@ -197,9 +217,10 @@ function closeEditModal() {
   editingRental.value = null
 }
 
-/* ============= SAVE EDIT DATES ============= */
+/* SAVE EDIT DATES */
 async function saveEditDates() {
   if (!editingRental.value) return
+
   try {
     await rentalService.updateRentalDates(
       editingRental.value.id,
@@ -214,13 +235,20 @@ async function saveEditDates() {
   }
 }
 
-/* ============= CLEAR CART ============= */
-function clearCart(rentalId) {
-  if (!confirm("Bạn có chắc muốn xóa đơn thuê này khỏi giỏ?")) return
-  rentals.value = rentals.value.filter(r => r.id !== rentalId)
+/* DELETE RENTAL */
+async function deleteRental(rentalId) {
+  if (!confirm("Bạn có chắc muốn xóa đơn thuê này?")) return
+
+  try {
+    await rentalService.deleteRental(rentalId)
+    alert("Đã xóa đơn thuê.")
+    await loadRentals()
+  } catch (err) {
+    alert("Lỗi khi xóa: " + (err.response?.data?.message || err.message))
+  }
 }
 
-/* ============= CHECKOUT ============= */
+/* CHECKOUT */
 function proceedToCheckout(rental) {
   router.push({ path: "/rentalCheckout", query: { rentalId: rental.id } })
 }
@@ -229,17 +257,57 @@ onMounted(loadRentals)
 </script>
 
 <style scoped>
-.cart-page { max-width: 1100px; }
-.table { border-collapse: separate; border-spacing: 0 8px; }
-.table-header { background-color: #f8f9fb; font-weight: 600; }
-.table tbody tr { background: #fff; transition: 0.25s; border-radius: 12px; }
-.table tbody tr:hover { background-color: #f2f7ff; transform: translateY(-2px); }
-.empty-cart { background: linear-gradient(145deg, #ffffff, #f4f6f8); border: 1px solid #e6e9ee; }
-.btn { border-radius: 0.6rem; transition: all 0.2s ease; }
-.btn:hover { transform: translateY(-1px); }
-.btn-success:hover { background-color: #157347; }
-.btn-outline-primary:hover { background-color: #0d6efd; color: #fff; }
-.cart-summary { border-top: 1px solid #dee2e6; padding-top: 1.2rem; }
-.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; opacity: 0.5; z-index: 1040; }
-.modal.show { display: block; z-index: 1050; }
+.cart-page {
+  max-width: 1100px;
+}
+.table {
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+.table-header {
+  background-color: #f8f9fb;
+  font-weight: 600;
+}
+.table tbody tr {
+  background: #fff;
+  transition: 0.25s;
+  border-radius: 12px;
+}
+.table tbody tr:hover {
+  background-color: #f2f7ff;
+  transform: translateY(-2px);
+}
+.empty-cart {
+  background: linear-gradient(145deg, #ffffff, #f4f6f8);
+  border: 1px solid #e6e9ee;
+}
+.btn {
+  border-radius: 0.6rem;
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn-success:hover {
+  background-color: #157347;
+}
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: #fff;
+}
+.cart-summary {
+  border-top: 1px solid #dee2e6;
+  padding-top: 1.2rem;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: #000;
+  opacity: 0.5;
+  z-index: 1040;
+}
+.modal.show {
+  display: block;
+  z-index: 1050;
+}
 </style>

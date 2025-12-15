@@ -286,7 +286,7 @@ import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
-import rentalService from "@/services/rentalService";
+import rentalService from "@/services/dailyRentalService";
 import reviewService from "@/services/reviewService";
 import defaultImage from "@/assets/no-image.png";
 

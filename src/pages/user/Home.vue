@@ -211,7 +211,7 @@
 import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
 import cartApi from "@/services/cartService";
-import rentalService from "@/services/rentalService";
+import rentalService from "@/services/dailyRentalService";
 import voucherService from "@/services/voucherService";
 import { useRouter } from "vue-router";
 import defaultImage from "@/assets/no-image.png";

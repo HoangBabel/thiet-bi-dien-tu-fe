@@ -1,6 +1,6 @@
 // src/stores/rentalCart.js
 import { defineStore } from "pinia";
-import rentalService from "@/services/rentalService";
+import rentalService from "@/services/dailyrentalService";
 import rentalCheckoutService from "@/services/rentalCheckoutService";
 
 export const useRentalCartStore = defineStore("rentalCart", {

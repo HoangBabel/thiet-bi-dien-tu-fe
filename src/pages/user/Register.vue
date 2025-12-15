@@ -162,14 +162,57 @@ const authStore = useAuthStore();
 async function handleRegister() {
   error.value = "";
 
+  // ===== 1. BẮT BUỘC =====
   if (!username.value || !fullName.value || !email.value || !password.value) {
-    error.value = "Vui lòng điền đầy đủ thông tin bắt buộc.";
+    error.value = "Vui lòng điền đầy đủ các trường bắt buộc.";
     return;
   }
+
+  // ===== 2. USERNAME =====
+  if (username.value.length < 4) {
+    error.value = "Tên đăng nhập phải có ít nhất 4 ký tự.";
+    return;
+  }
+
+  const usernameRegex = /^[a-zA-Z0-9_]+$/;
+  if (!usernameRegex.test(username.value)) {
+    error.value = "Tên đăng nhập không được chứa ký tự đặc biệt.";
+    return;
+  }
+
+  // ===== 3. HỌ TÊN =====
+  if (fullName.value.length < 2) {
+    error.value = "Họ tên phải có ít nhất 2 ký tự.";
+    return;
+  }
+
+  // ===== 4. EMAIL =====
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.value)) {
+    error.value = "Email không đúng định dạng.";
+    return;
+  }
+
+  // ===== 5. SỐ ĐIỆN THOẠI (tuỳ chọn) =====
+  if (phoneNumber.value) {
+    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+    if (!phoneRegex.test(phoneNumber.value)) {
+      error.value = "Số điện thoại không hợp lệ.";
+      return;
+    }
+  }
+
+  // ===== 6. MẬT KHẨU =====
   if (password.value.length < 6) {
     error.value = "Mật khẩu phải có ít nhất 6 ký tự.";
     return;
   }
+
+  if (!confirmPassword.value) {
+    error.value = "Vui lòng xác nhận mật khẩu.";
+    return;
+  }
+
   if (password.value !== confirmPassword.value) {
     error.value = "Mật khẩu xác nhận không khớp.";
     return;
@@ -189,18 +232,23 @@ async function handleRegister() {
 
     await authStore.login(email.value, password.value);
 
-    alert(`Đăng ký thành công! Chào mừng ${fullName.value || username.value}`);
+    alert(`🎉 Đăng ký thành công! Chào mừng ${fullName.value || username.value}`);
     router.push("/");
   } catch (err) {
-    console.error("Register error:", err);
+    console.error("❌ Register error:", err);
 
-    if (err.response?.status === 400)
-      error.value = err.response.data || "Thông tin đăng ký không hợp lệ.";
-    else if (err.response?.status === 409)
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+
+    if (status === 409) {
       error.value = "Email hoặc tên đăng nhập đã tồn tại.";
-    else if (err.response?.data?.errors)
-      error.value = Object.values(err.response.data.errors).flat().join(" ");
-    else error.value = "Không thể kết nối đến máy chủ.";
+    } else if (status === 400) {
+      error.value = data?.message || "Thông tin đăng ký không hợp lệ.";
+    } else if (data?.errors) {
+      error.value = Object.values(data.errors).flat().join(" ");
+    } else {
+      error.value = "Thông tin đăng ký không hợp lệ.";
+    }
   } finally {
     loading.value = false;
   }

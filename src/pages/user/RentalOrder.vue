@@ -129,7 +129,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import rentalService from "@/services/RentalService";
+import rentalService from "@/services/dailyRentalService";
 
 const rentals = ref([]);
 const loading = ref(true);

@@ -1,8 +1,8 @@
 <template>
   <div>
-    <h2 class="mb-4"> Bảng điều khiển</h2>
+    <h2 class="mb-4">📊 Bảng điều khiển</h2>
 
-    <!-- Cards -->
+    <!-- Summary Cards -->
     <div class="row mb-4">
       <div class="col-md-3" v-for="(item, i) in summary" :key="i">
         <div class="card text-white mb-3" :class="item.bg">
@@ -28,7 +28,7 @@
 
       <div class="col-md-4 mb-4">
         <div class="card">
-          <div class="card-header fw-bold">Tỷ lệ đơn hàng</div>
+          <div class="card-header fw-bold">Tỷ lệ trạng thái đơn</div>
           <div class="card-body">
             <canvas id="orderPie"></canvas>
           </div>
@@ -39,64 +39,152 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from "vue"
+/* =============================
+    IMPORT
+============================= */
+import { onMounted, reactive, ref } from "vue"
 import { Chart, registerables } from "chart.js"
+import orderService from "@/services/orderService"
+import rentalService from "@/services/dailyRentalService"
+import userService from "@/services/userService"
+import api from "@/services/api"
+
 Chart.register(...registerables)
 
-// Mock data (giả lập)
+/* =============================
+    SUMMARY CARDS
+============================= */
 const summary = reactive([
-  { title: "Doanh thu tháng này", value: 12000000, bg: "bg-primary", note: "+12% so với tháng trước" },
-  { title: "Đơn hàng mới", value: 235, bg: "bg-success", note: "+8% tăng trưởng" },
-  { title: "Khách hàng mới", value: 57, bg: "bg-warning", note: "Ổn định so với tháng trước" },
-  { title: "Sản phẩm đang bán", value: 48, bg: "bg-danger", note: "2 sản phẩm sắp hết hàng" }
+  { title: "Tổng doanh thu", value: 0, bg: "bg-primary", note: "" },
+  { title: "Tổng đơn", value: 0, bg: "bg-success", note: "" },
+  { title: "Khách hàng", value: 0, bg: "bg-warning", note: "" },
+  { title: "Sản phẩm đang bán", value: 0, bg: "bg-danger", note: "" }
 ])
 
-onMounted(() => {
-  drawRevenueChart()
-  drawOrderPie()
-})
+const chartLabels = ref([])
+const chartRevenue = ref([])
+const orderPieData = ref([])
 
+/* =============================
+    NORMALIZE STATUS (Order + Rental)
+============================= */
+function normalizeStatus(s) {
+  if (!s) return "Unknown"
+  const val = typeof s === "string" ? s.toLowerCase() : s
+
+  if (val === 0 || val === "pending") return "pending"
+  if (val === 1 || val === "processing" || val === "active") return "processing"
+  if (val === 2 || val === "completed") return "completed"
+  if (val === 3 || val === "cancelled") return "cancelled"
+
+  return "unknown"
+}
+
+/* =============================
+    LOAD DASHBOARD DATA
+============================= */
+async function loadDashboardData() {
+
+  /* === USERS === */
+  const userRes = await userService.getAll()
+  summary[2].value = userRes.data.length
+
+  /* === PRODUCTS === */
+  const productRes = await api.get("/Product")
+  summary[3].value = productRes.data.length
+
+  /* === ORDERS === */
+  const orders = await orderService.getAllOrders()
+
+  /* === RENTALS === */
+  const rentals = await rentalService.getAllRentals()
+
+  /* ==== TỔNG DOANH THU ==== */
+  const totalRevenueOrder = orders.reduce((t, o) => t + (o.totalAmount || 0), 0)
+  const totalRevenueRental = rentals.reduce((t, r) => t + ((r.totalPrice || 0) + (r.depositPaid || 0)), 0)
+  const totalRevenue = totalRevenueOrder + totalRevenueRental
+  summary[0].value = totalRevenue
+
+  /* === TỔNG ĐƠN === */
+  summary[1].value = orders.length + rentals.length
+
+  /* ==== PIE CHART: MERGE TRẠNG THÁI ORDER + RENTAL ==== */
+  const statusCount = { pending: 0, processing: 0, completed: 0, cancelled: 0 }
+
+  orders.forEach(o => statusCount[normalizeStatus(o.status)]++)
+  rentals.forEach(r => statusCount[normalizeStatus(r.status)]++)
+
+  orderPieData.value = [
+    statusCount.completed,
+    statusCount.processing,
+    statusCount.pending,
+    statusCount.cancelled
+  ]
+
+  /* ==== REVENUE BY MONTH ==== */
+  const months = Array(12).fill(0)
+
+  orders.forEach(o => {
+    const m = new Date(o.createdDate).getMonth()
+    months[m] += o.totalAmount || 0
+  })
+
+  rentals.forEach(r => {
+    const m = new Date(r.startDate).getMonth()
+    months[m] += (r.totalPrice || 0) + (r.depositPaid || 0)
+  })
+
+  chartLabels.value = ["1","2","3","4","5","6","7","8","9","10","11","12"]
+  chartRevenue.value = months
+}
+
+/* =============================
+    DRAW CHARTS
+============================= */
 function drawRevenueChart() {
-  const ctx = document.getElementById("revenueChart")
-  new Chart(ctx, {
+  new Chart(document.getElementById("revenueChart"), {
     type: "bar",
     data: {
-      labels: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6"],
+      labels: chartLabels.value,
       datasets: [
         {
           label: "Doanh thu (VNĐ)",
-          data: [10, 20, 15, 30, 25, 40],
+          data: chartRevenue.value,
           backgroundColor: "rgba(54, 162, 235, 0.6)",
-        },
-      ],
+        }
+      ]
     },
     options: {
       responsive: true,
-      scales: {
-        y: { beginAtZero: true, ticks: { callback: v => v + "tr" } },
-      },
-    },
+      scales: { y: { beginAtZero: true } }
+    }
   })
 }
 
 function drawOrderPie() {
-  const ctx = document.getElementById("orderPie")
-  new Chart(ctx, {
+  new Chart(document.getElementById("orderPie"), {
     type: "pie",
     data: {
-      labels: ["Hoàn tất", "Đang giao", "Hủy"],
+      labels: ["Hoàn tất", "Đang xử lý", "Chờ xử lý", "Đã hủy"],
       datasets: [
         {
-          data: [65, 25, 10],
-          backgroundColor: ["#198754", "#ffc107", "#dc3545"],
-        },
-      ],
+          data: orderPieData.value,
+          backgroundColor: ["#198754", "#0d6efd", "#ffc107", "#dc3545"],
+        }
+      ]
     },
-    options: {
-      responsive: true,
-    },
+    options: { responsive: true }
   })
 }
+
+/* =============================
+    ON MOUNT
+============================= */
+onMounted(async () => {
+  await loadDashboardData()
+  drawRevenueChart()
+  drawOrderPie()
+})
 </script>
 
 <style scoped>

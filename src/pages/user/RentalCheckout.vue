@@ -160,7 +160,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
-import rentalService from "@/services/RentalService";
+import rentalService from "@/services/dailyRentalService";
 import rentalCheckoutService from "@/services/rentalCheckoutService";
 import locationService from "@/services/locationService";
 import shippingService from "@/services/shippingService";
