@@ -107,54 +107,11 @@
     </div>
 
     <!-- Reviews -->
-    <div class="mt-5" v-if="reviews">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-semibold text-primary">⭐ Đánh giá & Nhận xét ({{ reviews.total }})</h4>
-
-        <button class="btn btn-outline-primary" @click="openReviewModal" v-if="isLoggedIn">
-          <i class="bi bi-pencil-square me-1"></i> Viết đánh giá
-        </button>
-        <button class="btn btn-outline-danger" disabled v-else>🔒 Đăng nhập để đánh giá</button>
-      </div>
-
-      <div class="mb-3" v-if="reviews.averageRating">
-        <span class="fw-bold fs-5 text-warning">{{ reviews.averageRating.toFixed(1) }} / 5 ⭐</span>
-        <p class="text-muted small mb-0">Dựa trên {{ reviews.total }} lượt đánh giá</p>
-      </div>
-
-      <!-- LIST -->
-      <div v-if="reviews.data.length > 0">
-        <div v-for="rv in reviews.data" :key="rv.id" class="p-3 border rounded mb-3 bg-white shadow-sm">
-          <div class="d-flex align-items-center mb-1">
-            <strong class="me-2">{{ rv.userName || "Người dùng" }}</strong>
-
-            <span v-for="i in 5" :key="i">
-              <i class="bi" :class="i <= rv.rating ? 'bi-star-fill text-warning' : 'bi-star text-muted'"></i>
-            </span>
-
-            <span class="text-muted small ms-2">
-              {{ new Date(rv.createdAt).toLocaleDateString("vi-VN") }}
-            </span>
-          </div>
-
-          <p class="mb-1">{{ rv.comment }}</p>
-
-          <div v-if="rv.imageUrls?.length" class="d-flex gap-2 flex-wrap mt-2">
-            <img
-              v-for="(img, idx) in rv.imageUrls"
-              :key="idx"
-              :src="img"
-              @click="openZoom(img)"
-              class="rounded border"
-              style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;"
-            />
-          </div>
-        </div>
-      </div>
-
-      <p v-else class="text-muted fst-italic">Hiện chưa có đánh giá nào.</p>
-    </div>
-
+    <ProductReviews
+  v-if="product"
+  :productId="product.idProduct"
+  @zoom="openZoom"
+/>
     <!-- Sản phẩm tương tự -->
     <div class="mt-5">
       <h4 class="fw-semibold mb-3 text-primary">🔁 Sản phẩm tương tự</h4>
@@ -221,48 +178,8 @@
     <p class="mt-2">Đang tải...</p>
   </div>
 
-  <!-- Modal Review -->
-  <div v-if="showReviewModal" class="modal-backdrop-custom">
-    <div class="modal-content-custom bg-white p-4 rounded shadow-lg">
-      <h5 class="fw-bold text-primary mb-3">Viết đánh giá</h5>
 
-      <!-- Cảnh báo trong modal -->
-      <div v-if="reviewAlert" class="alert alert-danger py-2 small">
-        {{ reviewAlert }}
-      </div>
 
-      <!-- Rating -->
-      <div class="mb-3">
-        <label class="form-label fw-semibold small">Đánh giá *</label><br />
-        <span
-          v-for="i in 5"
-          :key="i"
-          @click="newReview.rating = i"
-          style="cursor: pointer;"
-        >
-          <i
-            class="bi"
-            :class="i <= newReview.rating ? 'bi-star-fill text-warning fs-4' : 'bi-star fs-4 text-muted'"
-          ></i>
-        </span>
-      </div>
-
-      <!-- Comment -->
-      <textarea
-        v-model="newReview.comment"
-        class="form-control mb-3"
-        rows="3"
-        placeholder="Chia sẻ cảm nhận của bạn..."
-      ></textarea>
-
-      <div class="text-end">
-        <button class="btn btn-secondary me-2" @click="closeReviewModal">Hủy</button>
-        <button class="btn btn-primary" @click="submitReview">
-          <i class="bi bi-check-circle me-1"></i> Gửi đánh giá
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- Toast Popup góc phải -->
   <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 3000;">
@@ -289,6 +206,7 @@ import cartApi from "@/services/cartService";
 import rentalService from "@/services/dailyRentalService";
 import reviewService from "@/services/reviewService";
 import defaultImage from "@/assets/no-image.png";
+import ProductReviews from "@/components/ProductReviews.vue";
 
 const backendUrl = "https://localhost:44303";
 const route = useRoute();

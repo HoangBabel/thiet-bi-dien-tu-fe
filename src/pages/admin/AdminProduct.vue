@@ -82,8 +82,8 @@
             <td>{{ getCategoryName(p.categoryId) }}</td>
 
             <td>
-              <button class="btn btn-sm btn-warning me-2" @click="openForm(p)">Sửa</button>
-              <button class="btn btn-sm btn-danger" @click="deleteProduct(p.idProduct)">Xóa</button>
+              <button class="btn btn-sm btn-warning me-2" @click="openForm(p)"> Chỉnh Sửa</button>
+              <!-- <button class="btn btn-sm btn-danger" @click="deleteProduct(p.idProduct)">Xóa</button> -->
             </td>
           </tr>
 

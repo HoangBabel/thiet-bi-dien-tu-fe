@@ -84,8 +84,8 @@
             </td>
 
             <td>
-              <button class="btn btn-sm btn-warning me-2" @click="openForm(v)">Sửa</button>
-              <button class="btn btn-sm btn-danger" @click="deleteVoucher(v.id)">Xóa</button>
+              <button class="btn btn-sm btn-warning me-2" @click="openForm(v)">Chỉnh Sửa</button>
+              <!-- <button class="btn btn-sm btn-danger" @click="deleteVoucher(v.id)">Xóa</button> -->
             </td>
           </tr>
 

@@ -77,6 +77,18 @@
             </router-link>
           </li>
 
+           <!-- Hỗ Trợ -->
+<li class="nav-item">
+  <a
+    href="https://www.facebook.com/profile.php?id=61585450220164"
+    class="nav-link"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <i class="bi bi-question-circle me-1"></i> Hỗ Trợ
+  </a>
+</li>
+
           <!-- User dropdown -->
           <li
             class="nav-item dropdown"
