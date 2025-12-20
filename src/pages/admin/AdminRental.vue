@@ -78,7 +78,7 @@
                 Cập nhật
               </button>
               <button class="btn btn-sm btn-info" @click="openDetail(r)">
-                Xem
+                Chi tiết
               </button>
             </td>
           </tr>
