@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:44303/api/cart"; // đổi theo backend thực tế
+const API_URL = "http://localhost:5126/api/cart"; // đổi theo backend thực tế
 
 // lấy JWT token
 function authHeader() {

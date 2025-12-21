@@ -29,7 +29,7 @@ export const useAuthStore = defineStore("auth", {
       // Nếu là file nội bộ → chuẩn hóa URL
       if (!raw.startsWith("http")) {
         raw = raw.replace(/^\/+/, "");
-        return `https://localhost:44303/${raw}`;
+        return `http://localhost:5126/${raw}`;
       }
 
       return raw; // Không thêm timestamp ở getter nữa

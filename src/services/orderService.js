@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "https://localhost:44303/api";
+const API_BASE = "http://localhost:5126/api";
 
 // Lấy token JWT từ localStorage
 function authHeader() {

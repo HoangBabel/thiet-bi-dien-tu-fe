@@ -1,7 +1,7 @@
 // services/shippingService.js
 import axios from "axios";
 
-const API_BASE = "https://localhost:44303/api"; // base URL backend
+const API_BASE = "http://localhost:5126/api"; // base URL backend
 
 function authHeader() {
   const token = localStorage.getItem("token");

@@ -203,7 +203,7 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { Modal } from "bootstrap";
 import api from "@/services/api";
 
-const backendUrl = "https://localhost:44303";
+const backendUrl = "http://localhost:5126";
 const defaultImage = "https://via.placeholder.com/60";
 
 const products = ref([]);

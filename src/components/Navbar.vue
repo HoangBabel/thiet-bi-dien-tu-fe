@@ -172,7 +172,7 @@ const resolvedAvatar = computed(() => {
 
   if (!raw.startsWith("http")) {
     const clean = raw.replace(/^\/+/, "");
-    return `https://localhost:44303/${clean}?v=${Date.now()}`;
+    return `http://localhost:5126/${clean}?v=${Date.now()}`;
   }
 
   return `${raw}?v=${Date.now()}`;

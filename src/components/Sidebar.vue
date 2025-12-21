@@ -120,7 +120,7 @@ onMounted(() => {
 const resolvedAvatar = computed(() => {
   const avatar = authStore.user?.avatarUrl || authStore.user?.avatar;
   if (!avatar) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-  if (avatar.startsWith("/")) return `https://localhost:44303${avatar}`;
+  if (avatar.startsWith("/")) return `http://localhost:5126${avatar}`;
   return avatar;
 });
 

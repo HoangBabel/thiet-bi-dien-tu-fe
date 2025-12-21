@@ -152,9 +152,9 @@
     <section class="mt-5">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="fw-bold text-dark mb-0">🎁 Mã Giảm Giá Hiện Có</h3>
-        <router-link to="/vouchers" class="btn btn-outline-primary btn-sm">
+        <!-- <router-link to="/vouchers" class="btn btn-outline-primary btn-sm">
           Xem tất cả
-        </router-link>
+        </router-link> -->
       </div>
 
       <div class="row g-4">
@@ -216,7 +216,7 @@ import voucherService from "@/services/voucherService";
 import { useRouter } from "vue-router";
 import defaultImage from "@/assets/no-image.png";
 
-const backendUrl = "https://localhost:44303";
+const backendUrl = "http://localhost:5126";
 
 const router = useRouter();
 

@@ -171,7 +171,7 @@ const resolvedAvatar = computed(() => {
   if (!raw.startsWith("http")) {
     const cleanPath = raw.replace(/^\/+/, ""); // bỏ dấu /
 
-    return `https://localhost:44303/${cleanPath}?v=${Date.now()}`;
+    return `http://localhost:5126/${cleanPath}?v=${Date.now()}`;
   }
 
   // Nếu là full URL

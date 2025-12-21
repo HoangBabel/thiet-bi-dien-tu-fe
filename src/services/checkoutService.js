@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "https://localhost:44303/api";
+const API_BASE = "http://localhost:5126/api";
 
 /**
  * Header Authorization nếu token tồn tại

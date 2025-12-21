@@ -187,7 +187,7 @@ import defaultImage from "@/assets/no-image.png";
 import { useRentalCartStore } from "@/stores/rentalCart";
 
 const rentalCartStore = useRentalCartStore();
-const backendUrl = "https://localhost:44303";
+const backendUrl = "http://localhost:5126";
 
 const route = useRoute();
 const router = useRouter();

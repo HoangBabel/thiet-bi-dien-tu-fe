@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:44303/api/voucher";
+const API_URL = "http://localhost:5126/api/voucher";
 
 // Lấy JWT token từ localStorage
 function authHeader() {

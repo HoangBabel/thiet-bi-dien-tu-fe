@@ -4,7 +4,7 @@ import axios from "axios";
    ⚙️ CẤU HÌNH API BASE
 ========================================== */
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://localhost:44303/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5126/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -208,7 +208,7 @@ import reviewService from "@/services/reviewService";
 import defaultImage from "@/assets/no-image.png";
 import ProductReviews from "@/components/ProductReviews.vue";
 
-const backendUrl = "https://localhost:44303";
+const backendUrl = "http://localhost:5126";
 const route = useRoute();
 const router = useRouter();
 
